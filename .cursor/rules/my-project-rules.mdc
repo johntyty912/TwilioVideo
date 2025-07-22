@@ -1,0 +1,8 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+- always remember to update the [TWILIO_VIDEO_KMP_PLAN.md](mdc:doc/TWILIO_VIDEO_KMP_PLAN.md)
+- always follow the [TWILIO_VIDEO_KMP_PLAN.md](mdc:doc/TWILIO_VIDEO_KMP_PLAN.md)
+- Unit test is prefered

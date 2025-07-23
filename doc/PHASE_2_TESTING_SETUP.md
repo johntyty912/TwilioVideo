@@ -130,7 +130,7 @@ mise run android-sdk-check
 # Create environment file for testing
 touch .env.local
 echo "# Twilio Video Token Service" >> .env.local
-echo "TWILIO_TOKEN_URL=https://api.robocore.ai/twilio/video_token" >> .env.local
+echo "TWILIO_TOKEN_URL=https://your-api-endpoint.com/twilio/video_token" >> .env.local
 echo "" >> .env.local
 echo "# Testing Configuration" >> .env.local
 echo "# User identity should always be 'user'" >> .env.local
@@ -149,7 +149,7 @@ echo "EXAMPLE_ROOM_NAME=a1b2c3d4e5" >> .env.local
 
 #### Example API Call
 ```json
-POST https://api.robocore.ai/twilio/video_token
+POST https://your-api-endpoint.com/twilio/video_token
 Content-Type: application/json
 
 {

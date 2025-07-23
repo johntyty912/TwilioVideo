@@ -11,9 +11,9 @@ import kotlinx.serialization.json.Json
 
 /**
  * Token service client for getting Twilio video tokens
- * Uses the existing API endpoint: https://api.robocore.ai/twilio/video_token
+ * Uses a configurable API endpoint for token retrieval
  */
-class TokenService(private val baseUrl: String = "https://api.robocore.ai") {
+class TokenService(private val baseUrl: String = "https://your-api-endpoint.com") {
     
     private val httpClient = HttpClient {
         install(ContentNegotiation) {

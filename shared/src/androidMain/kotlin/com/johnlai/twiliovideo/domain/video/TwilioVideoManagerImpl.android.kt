@@ -234,14 +234,14 @@ actual class TwilioVideoManagerImpl actual constructor() : TwilioVideoManager {
         return try {
             _room.value?.disconnect()
             _room.value = null
-            _participants.value = emptyList()
+        _participants.value = emptyList()
             
             // Clean up local tracks
             _localVideoTrack.value?.release()
             _localAudioTrack.value?.release()
             _cameraCapture.value?.stopCapture()
             
-            _localVideoTrack.value = null
+        _localVideoTrack.value = null
             _localAudioTrack.value = null
             _cameraCapture.value = null
             

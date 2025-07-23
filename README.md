@@ -11,7 +11,7 @@
 ## 🚀 **What's Working Now**
 
 ### ✅ Real Twilio Video Features
-- **Token Service Integration**: Uses your existing `https://api.robocore.ai/twilio/video_token` API
+- **Token Service Integration**: Uses your existing API endpoint for token retrieval
 - **Camera Management**: Front/back camera switching, enable/disable
 - **Audio Management**: Microphone control
 - **Room Connection**: Real video room connection with participant management
@@ -99,7 +99,7 @@ videoManager.release()
 
 Your API endpoint is automatically used:
 ```json
-POST https://api.robocore.ai/twilio/video_token
+POST https://your-api-endpoint.com/twilio/video_token
 {
   "userIdentity": "user",
   "roomName": "a1b2c3d4e5"  // 10-character alphanumeric

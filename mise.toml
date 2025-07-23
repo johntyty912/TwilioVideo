@@ -190,7 +190,7 @@ run = [
     "echo '4. Creating .env.local template...'",
     "touch .env.local",
     "echo '# Twilio Video Token Service' > .env.local",
-    "echo 'TWILIO_TOKEN_URL=https://api.robocore.ai/twilio/video_token' >> .env.local",
+    "echo 'TWILIO_TOKEN_URL=https://your-api-endpoint.com/twilio/video_token' >> .env.local",
     "echo '' >> .env.local",
     "echo '# Testing Configuration' >> .env.local",
     "echo '# User identity should always be \"user\"' >> .env.local",

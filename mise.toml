@@ -3,8 +3,8 @@
 # Usage: `mise install` to install all tools, `mise use` to activate them
 
 [tools]
-# Java Development Kit - JetBrains Runtime recommended for KMP
-java = "jetbrains-17.0.9+8-b1166.2"
+# Java Development Kit - Eclipse Temurin (reliable for KMP development)
+java = "temurin-17.0.16+8"
 
 # Gradle Build Tool - matches project wrapper version
 gradle = "8.13"
@@ -21,16 +21,19 @@ ruby = "3.2.0"
 # Kotlin Native compiler dependencies
 kotlin = "2.2.0"
 
+# YAML processor for tooling (useful for config files)
+yq = "4.47.1"
+
 [env]
 # Android SDK configuration
-ANDROID_HOME = "~/Library/Android/sdk"
-ANDROID_SDK_ROOT = "~/Library/Android/sdk"
+ANDROID_HOME = "{{env.HOME}}/Library/Android/sdk"
+ANDROID_SDK_ROOT = "{{env.HOME}}/Library/Android/sdk"
 
-# Java configuration
-JAVA_HOME = "~/.mise/installs/java/jetbrains-17.0.9+8-b1166.2"
+# Java configuration - mise handles this automatically
+# JAVA_HOME will be set by mise when java tool is activated
 
-# Gradle configuration
-GRADLE_HOME = "~/.mise/installs/gradle/8.13"
+# Gradle configuration - mise handles this automatically
+# GRADLE_HOME will be set by mise when gradle tool is activated
 
 # iOS development (if on macOS)
 DEVELOPER_DIR = "/Applications/Xcode.app/Contents/Developer"
@@ -79,8 +82,9 @@ run = [
 [tasks.test]
 description = "Run all tests"
 run = [
-    "echo '🧪 Running all tests...'",
-    "./gradlew test"
+    "echo '🧪 Running shared module tests...'",
+    "./gradlew shared:test",
+    "echo '✅ Shared module tests completed successfully!'"
 ]
 
 [tasks.clean]
@@ -121,11 +125,83 @@ run = [
     "ruby --version",
     "echo '📍 CocoaPods version:'",
     "pod --version",
+    "echo '📍 YQ version:'",
+    "yq --version",
     "echo '📍 Android SDK location:'",
     "echo $ANDROID_HOME",
     "echo '📍 Xcode path:'",
     "xcode-select --print-path",
     "echo '✅ Environment verification complete!'"
+]
+
+[tasks.android-sdk-check]
+description = "Check Android SDK installation and setup"
+run = '''
+echo '🤖 Checking Android SDK setup...'
+if [ -z "$ANDROID_HOME" ]; then
+  echo '⚠️  ANDROID_HOME not set!'
+  echo '💡 Install Android Studio or Android SDK manually:'
+  echo '   - Download from: https://developer.android.com/studio'
+  echo '   - Set ANDROID_HOME to your SDK location'
+  echo '   - Add ANDROID_HOME/tools and ANDROID_HOME/platform-tools to PATH'
+  echo ''
+  echo 'ℹ️  Run: mise run android-sdk-install-guide'
+  exit 1
+fi
+echo "✅ ANDROID_HOME: $ANDROID_HOME"
+if [ -d "$ANDROID_HOME" ]; then
+  echo '✅ Android SDK directory exists'
+  if command -v adb >/dev/null 2>&1; then
+    echo '✅ ADB available:'
+    adb version
+  else
+    echo '⚠️  ADB not found in PATH'
+  fi
+  if [ -f "$ANDROID_HOME/tools/bin/sdkmanager" ] || [ -f "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" ]; then
+    echo '✅ SDK Manager available'
+  else
+    echo '⚠️  SDK Manager not found'
+  fi
+else
+  echo "❌ Android SDK directory not found at: $ANDROID_HOME"
+  exit 1
+fi
+echo '🎉 Android SDK setup looks good!'
+'''
+
+[tasks.android-sdk-install-guide]
+description = "Show Android SDK installation guide"
+run = [
+    "echo '📱 Android SDK Installation Guide'",
+    "echo '================================'",
+    "echo ''",
+    "echo '🎯 Option 1: Android Studio (Recommended)'",
+    "echo '  1. Download Android Studio: https://developer.android.com/studio'",
+    "echo '  2. Install and run Android Studio'",
+    "echo '  3. Open SDK Manager (Tools → SDK Manager)'",
+    "echo '  4. Install:'",
+    "echo '     - Android SDK Platform 35 (for compileSdk)'",
+    "echo '     - Android SDK Platform 24 (for minSdk)' ",
+    "echo '     - Android SDK Build-Tools 35.0.0'",
+    "echo '     - Android SDK Platform-Tools'",
+    "echo '     - Android SDK Tools'",
+    "echo ''",
+    "echo '🎯 Option 2: Command Line Tools Only'",
+    "echo '  1. Download command line tools: https://developer.android.com/studio#downloads'",
+    "echo '  2. Extract to ~/Library/Android/sdk/cmdline-tools/latest'",
+    "echo '  3. Install packages:'",
+    "echo '     ~/Library/Android/sdk/cmdline-tools/latest/bin/sdkmanager \"platforms;android-35\"'",
+    "echo '     ~/Library/Android/sdk/cmdline-tools/latest/bin/sdkmanager \"platforms;android-24\"'",
+    "echo '     ~/Library/Android/sdk/cmdline-tools/latest/bin/sdkmanager \"build-tools;35.0.0\"'",
+    "echo '     ~/Library/Android/sdk/cmdline-tools/latest/bin/sdkmanager \"platform-tools\"'",
+    "echo ''",
+    "echo '⚙️  Environment Setup:'",
+    "echo '  Add to your shell profile (~/.zshrc or ~/.bashrc):'",
+    "echo '  export ANDROID_HOME=~/Library/Android/sdk'",
+    "echo '  export PATH=$PATH:$ANDROID_HOME/platform-tools:$ANDROID_HOME/tools'",
+    "echo ''",
+    "echo '✅ Verification:'",
+    "echo '  mise run android-sdk-check'"
 ]
 
 [tasks.dev-docs]
@@ -152,12 +228,14 @@ run = [
     "echo '  ./gradlew check       # Run all checks'",
     "echo ''",
     "echo '🔧 Utilities:'",
-    "echo '  mise run verify-env   # Verify environment'",
-    "echo '  mise run clean        # Clean build artifacts'",
+    "echo '  mise run verify-env        # Verify environment'",
+    "echo '  mise run android-sdk-check # Check Android SDK'",
+    "echo '  mise run clean             # Clean build artifacts'",
     "echo ''",
-    "echo '📖 Documentation:'",
-    "echo '  doc/TWILIO_VIDEO_KMP_PLAN.md     # Project plan'",
-    "echo '  doc/PHASE_1_TUTORIAL.md          # Phase 1 guide'",
+    "echo '📖 Documentation & Setup:'",
+    "echo '  mise run android-sdk-install-guide # Android SDK setup guide'",
+    "echo '  doc/TWILIO_VIDEO_KMP_PLAN.md      # Project plan'",
+    "echo '  doc/PHASE_1_TUTORIAL.md           # Phase 1 guide'",
     "echo ''",
     "echo '🔗 Useful Links:'",
     "echo '  - Twilio Video Docs: https://www.twilio.com/docs/video'",
@@ -176,4 +254,4 @@ b = "run build"
 t = "run test"
 c = "run clean"
 v = "run verify-env"
-d = "run dev-docs" 
+docs = "run dev-docs" 

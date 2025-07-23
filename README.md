@@ -44,16 +44,18 @@ mise b          # Build project (alias for: mise run build)
 mise t          # Run tests (alias for: mise run test)
 mise c          # Clean build (alias for: mise run clean)
 mise v          # Verify environment (alias for: mise run verify-env)
-mise d          # Show dev docs (alias for: mise run dev-docs)
 
 # Full commands
-mise run setup           # Complete project setup
-mise run build           # Build entire project
-mise run test            # Run all tests
-mise run android-build   # Build Android app
-mise run ios-setup       # Setup iOS dependencies (macOS)
-mise run verify-env      # Verify development environment
-mise run dev-docs        # Show development guide
+mise run setup                     # Complete project setup
+mise run dev-docs                  # Show development guide
+mise run build                     # Build entire project
+mise run test                      # Run all tests
+mise run android-build             # Build Android app
+mise run android-sdk-check         # Check Android SDK installation
+mise run android-sdk-install-guide # Show Android SDK installation guide
+mise run ios-setup                 # Setup iOS dependencies (macOS)
+mise run verify-env                # Verify development environment
+mise run dev-docs                  # Show development guide
 ```
 
 ### Using Gradle Directly

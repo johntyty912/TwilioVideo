@@ -136,37 +136,36 @@ run = [
 [tasks.android-sdk-check]
 description = "Check Android SDK installation and setup"
 run = '''
-echo 'Checking Android SDK setup...'
+echo '🤖 Checking Android SDK setup...'
 if [ -z "$ANDROID_HOME" ]; then
-  echo 'ANDROID_HOME not set!'
-  echo 'Install Android Studio or Android SDK manually:'
-  echo '  - Download from: https://developer.android.com/studio'
-  echo '  - Set ANDROID_HOME to your SDK location'
-  echo '  - Add ANDROID_HOME/tools and ANDROID_HOME/platform-tools to PATH'
+  echo '⚠️  ANDROID_HOME not set!'
+  echo '💡 Install Android Studio or Android SDK manually:'
+  echo '   - Download from: https://developer.android.com/studio'
+  echo '   - Set ANDROID_HOME to your SDK location'
+  echo '   - Add ANDROID_HOME/tools and ANDROID_HOME/platform-tools to PATH'
   echo ''
-  echo 'Run: mise run android-sdk-install-guide'
+  echo 'ℹ️  Run: mise run android-sdk-install-guide'
   exit 1
 fi
-echo "ANDROID_HOME: $ANDROID_HOME"
+echo "✅ ANDROID_HOME: $ANDROID_HOME"
 if [ -d "$ANDROID_HOME" ]; then
-  echo 'Android SDK directory exists'
+  echo '✅ Android SDK directory exists'
   if command -v adb >/dev/null 2>&1; then
-    echo 'ADB available:'
+    echo '✅ ADB available:'
     adb version
   else
-    echo 'ADB not found in PATH'
+    echo '⚠️  ADB not found in PATH'
   fi
   if [ -f "$ANDROID_HOME/tools/bin/sdkmanager" ] || [ -f "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" ]; then
-    echo 'SDK Manager available'
+    echo '✅ SDK Manager available'
   else
-    echo 'SDK Manager not found'
+    echo '⚠️  SDK Manager not found'
   fi
 else
-  echo "Android SDK directory not found at: $ANDROID_HOME"
+  echo "❌ Android SDK directory not found at: $ANDROID_HOME"
   exit 1
-fi
-echo 'Android SDK setup looks good!'
-'''
+  fi
+  echo '🎉 Android SDK setup looks good!'
 
 [tasks.phase2-setup]
 description = "Setup Phase 2 testing environment"
@@ -189,16 +188,15 @@ run = [
     "echo ''",
     "echo '4. Creating .env.local template...'",
     "touch .env.local",
-    "echo '# Twilio Video Token Service' > .env.local",
-    "echo 'TWILIO_TOKEN_URL=https://api.robocore.ai/twilio/video_token' >> .env.local",
+    "echo '# Twilio Video Credentials' > .env.local",
+    "echo '# Get these from: https://console.twilio.com/' >> .env.local",
+    "echo 'TWILIO_ACCOUNT_SID=your_account_sid_here' >> .env.local",
+    "echo 'TWILIO_API_KEY_SID=your_api_key_sid_here' >> .env.local",
+    "echo 'TWILIO_API_KEY_SECRET=your_api_key_secret_here' >> .env.local",
     "echo '' >> .env.local",
     "echo '# Testing Configuration' >> .env.local",
-    "echo '# User identity should always be \"user\"' >> .env.local",
-    "echo 'TEST_USER_IDENTITY=user' >> .env.local",
-    "echo '# Room name should be random 10-char alphanumeric string' >> .env.local",
-    "echo 'TEST_ROOM_NAME_LENGTH=10' >> .env.local",
-    "echo '# Example room name format: a1b2c3d4e5' >> .env.local",
-    "echo 'EXAMPLE_ROOM_NAME=a1b2c3d4e5' >> .env.local",
+    "echo 'TEST_ROOM_NAME=twilio-video-kmp-test' >> .env.local",
+    "echo 'TEST_USER_IDENTITY=test-user' >> .env.local",
     "echo '.env.local template created'",
     "echo ''",
     "echo 'Phase 2 setup complete!'",

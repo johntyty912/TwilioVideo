@@ -1,0 +1,179 @@
+# Mise configuration for Twilio Video KMP Project
+# This file ensures everyone has the same development environment
+# Usage: `mise install` to install all tools, `mise use` to activate them
+
+[tools]
+# Java Development Kit - JetBrains Runtime recommended for KMP
+java = "jetbrains-17.0.9+8-b1166.2"
+
+# Gradle Build Tool - matches project wrapper version
+gradle = "8.13"
+
+# Node.js for potential tooling and scripts
+node = "20.0.0"
+
+# Python for scripting and tooling
+python = "3.11.3"
+
+# Ruby for CocoaPods (iOS dependency management)
+ruby = "3.2.0"
+
+# Kotlin Native compiler dependencies
+kotlin = "2.2.0"
+
+[env]
+# Android SDK configuration
+ANDROID_HOME = "~/Library/Android/sdk"
+ANDROID_SDK_ROOT = "~/Library/Android/sdk"
+
+# Java configuration
+JAVA_HOME = "~/.mise/installs/java/jetbrains-17.0.9+8-b1166.2"
+
+# Gradle configuration
+GRADLE_HOME = "~/.mise/installs/gradle/8.13"
+
+# iOS development (if on macOS)
+DEVELOPER_DIR = "/Applications/Xcode.app/Contents/Developer"
+
+# KMP specific optimizations
+KOTLIN_DAEMON_JVMARGS = "-Xmx2048m -XX:+UseParallelGC"
+GRADLE_OPTS = "-Xmx4096m -XX:+UseParallelGC -XX:+HeapDumpOnOutOfMemoryError"
+
+# Mise configuration
+MISE_EXPERIMENTAL = "true"
+
+[tasks.install-deps]
+description = "Install all project dependencies"
+run = [
+    "echo '📦 Installing project dependencies...'",
+    "gem install cocoapods",
+    "echo '✅ CocoaPods installed'",
+    "./gradlew --version",
+    "echo '✅ Gradle verified'",
+    "echo '🎉 All dependencies installed successfully!'"
+]
+
+[tasks.setup]
+description = "Complete project setup for new developers"
+run = [
+    "echo '🚀 Setting up Twilio Video KMP project...'",
+    "mise install",
+    "mise use",
+    "mise run install-deps",
+    "echo '📱 Checking Android SDK...'",
+    "echo 'Please ensure Android SDK is installed at: $ANDROID_HOME'",
+    "echo '🍎 Checking iOS tools (macOS only)...'",
+    "xcode-select --print-path",
+    "echo '🧪 Running tests to verify setup...'",
+    "./gradlew shared:test",
+    "echo '✅ Project setup complete!'"
+]
+
+[tasks.build]
+description = "Build the entire project"
+run = [
+    "echo '🔨 Building Twilio Video KMP project...'",
+    "./gradlew build"
+]
+
+[tasks.test]
+description = "Run all tests"
+run = [
+    "echo '🧪 Running all tests...'",
+    "./gradlew test"
+]
+
+[tasks.clean]
+description = "Clean build artifacts"
+run = [
+    "echo '🧹 Cleaning build artifacts...'",
+    "./gradlew clean"
+]
+
+[tasks.android-build]
+description = "Build Android app"
+run = [
+    "echo '🤖 Building Android app...'",
+    "./gradlew composeApp:assembleDebug"
+]
+
+[tasks.ios-setup]
+description = "Setup iOS dependencies (macOS only)"
+run = [
+    "echo '🍎 Setting up iOS dependencies...'",
+    "cd iosApp && pod install",
+    "echo '✅ iOS setup complete!'"
+]
+
+[tasks.verify-env]
+description = "Verify development environment"
+run = [
+    "echo '🔍 Verifying development environment...'",
+    "echo '📍 Java version:'",
+    "java -version",
+    "echo '📍 Gradle version:'",
+    "./gradlew --version",
+    "echo '📍 Node.js version:'",
+    "node --version",
+    "echo '📍 Python version:'",
+    "python3 --version",
+    "echo '📍 Ruby version:'",
+    "ruby --version",
+    "echo '📍 CocoaPods version:'",
+    "pod --version",
+    "echo '📍 Android SDK location:'",
+    "echo $ANDROID_HOME",
+    "echo '📍 Xcode path:'",
+    "xcode-select --print-path",
+    "echo '✅ Environment verification complete!'"
+]
+
+[tasks.dev-docs]
+description = "Show development documentation"
+run = [
+    "echo '📚 Twilio Video KMP Development Guide'",
+    "echo '=================================='",
+    "echo ''",
+    "echo '🚀 Quick Start:'",
+    "echo '  mise run setup     # Complete project setup'",
+    "echo '  mise run build     # Build entire project'",
+    "echo '  mise run test      # Run all tests'",
+    "echo ''",
+    "echo '🤖 Android Development:'",
+    "echo '  mise run android-build  # Build Android app'",
+    "echo '  ./gradlew composeApp:installDebug  # Install on device'",
+    "echo ''",
+    "echo '🍎 iOS Development (macOS only):'",
+    "echo '  mise run ios-setup     # Setup iOS dependencies'",
+    "echo '  open iosApp/iosApp.xcodeproj  # Open in Xcode'",
+    "echo ''",
+    "echo '🧪 Testing:'",
+    "echo '  ./gradlew shared:test  # Run shared module tests'",
+    "echo '  ./gradlew check       # Run all checks'",
+    "echo ''",
+    "echo '🔧 Utilities:'",
+    "echo '  mise run verify-env   # Verify environment'",
+    "echo '  mise run clean        # Clean build artifacts'",
+    "echo ''",
+    "echo '📖 Documentation:'",
+    "echo '  doc/TWILIO_VIDEO_KMP_PLAN.md     # Project plan'",
+    "echo '  doc/PHASE_1_TUTORIAL.md          # Phase 1 guide'",
+    "echo ''",
+    "echo '🔗 Useful Links:'",
+    "echo '  - Twilio Video Docs: https://www.twilio.com/docs/video'",
+    "echo '  - KMP Docs: https://kotlinlang.org/docs/multiplatform.html'",
+    "echo '  - Compose Multiplatform: https://github.com/JetBrains/compose-multiplatform'"
+]
+
+# Platform-specific configurations
+[settings]
+experimental = true
+
+# Development shortcuts
+[alias]
+s = "run setup"
+b = "run build"
+t = "run test"
+c = "run clean"
+v = "run verify-env"
+d = "run dev-docs" 

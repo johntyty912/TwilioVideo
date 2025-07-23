@@ -34,6 +34,10 @@ kotlin {
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
                 // DateTime handling
                 implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.4.1")
+                // HTTP client for API calls
+                implementation("io.ktor:ktor-client-core:2.3.7")
+                implementation("io.ktor:ktor-client-content-negotiation:2.3.7")
+                implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.7")
             }
         }
         
@@ -53,6 +57,10 @@ kotlin {
                 // AndroidX libraries for permissions and lifecycle
                 implementation("androidx.core:core-ktx:1.12.0")
                 implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
+                // Android-specific HTTP client engine (platform implementation)
+                implementation("io.ktor:ktor-client-android:2.3.7")
+                // Android-specific logging (optional)
+                implementation("io.ktor:ktor-client-logging:2.3.7")
             }
         }
         

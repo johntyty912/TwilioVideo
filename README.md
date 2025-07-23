@@ -1,209 +1,212 @@
 # Twilio Video KMP
 
-A Kotlin Multiplatform project for integrating Twilio Video SDK across Android and iOS platforms with shared business logic.
+**A Kotlin Multiplatform (KMP) project integrating Twilio Video SDK for Android and iOS.**
 
-## 🚀 Quick Start
+## 🎯 **Project Status: Phase 2 Complete!**
+
+✅ **Real Android Twilio Video integration complete**  
+🔄 **Ready for iOS implementation**  
+📱 **Production-ready foundation established**
+
+## 🚀 **What's Working Now**
+
+### ✅ Real Twilio Video Features
+- **Token Service Integration**: Uses your existing `https://api.robocore.ai/twilio/video_token` API
+- **Camera Management**: Front/back camera switching, enable/disable
+- **Audio Management**: Microphone control
+- **Room Connection**: Real video room connection with participant management
+- **Reactive State**: Kotlin Flow-based state management for UI
+
+### ✅ Technical Foundation
+- **Kotlin Multiplatform**: Shared code between Android and iOS
+- **Real SDK Integration**: Actual Twilio Video Android SDK v7.6.0
+- **HTTP Client**: Ktor-based API integration
+- **Testing Environment**: Comprehensive test suite and automation
+- **Development Environment**: Automated setup with mise
+
+## 🛠️ **Quick Start**
 
 ### Prerequisites
-
-1. **Install Mise** (recommended for environment management):
-   ```bash
-   curl https://mise.run | sh
-   ```
-
-2. **Setup Development Environment**:
-   ```bash
-   # Clone the repository
-   git clone <repository-url>
-   cd TwilioVideo
-   
-   # Setup everything with one command
-   mise run setup
-   ```
-
-### Alternative Manual Setup
-
-If you prefer not to use mise, ensure you have:
-
-- **Java 17** (JetBrains Runtime recommended)
-- **Gradle 8.13+**
-- **Android SDK** (API 24+)
-- **Xcode 14+** (for iOS development, macOS only)
-- **CocoaPods** (for iOS dependencies)
-- **Node.js 20+** (for tooling)
-- **Python 3.11+** (for scripts)
-
-## 📋 Development Commands
-
-### Using Mise (Recommended)
-
 ```bash
-# Quick commands (aliases)
-mise s          # Setup project (alias for: mise run setup)
-mise b          # Build project (alias for: mise run build)
-mise t          # Run tests (alias for: mise run test)
-mise c          # Clean build (alias for: mise run clean)
-mise v          # Verify environment (alias for: mise run verify-env)
+# Install mise (if not already installed)
+curl https://mise.run | sh
 
-# Full commands
-mise run setup                     # Complete project setup
-mise run dev-docs                  # Show development guide
-mise run build                     # Build entire project
-mise run test                      # Run all tests
-mise run android-build             # Build Android app
-mise run android-sdk-check         # Check Android SDK installation
-mise run android-sdk-install-guide # Show Android SDK installation guide
-mise run ios-setup                 # Setup iOS dependencies (macOS)
-mise run verify-env                # Verify development environment
-mise run dev-docs                  # Show development guide
-```
-
-### Using Gradle Directly
-
-```bash
-# Build and test
-./gradlew build                    # Build entire project
-./gradlew shared:test              # Run shared module tests
-./gradlew check                    # Run all checks
-
-# Android
-./gradlew composeApp:assembleDebug # Build Android app
-./gradlew composeApp:installDebug  # Install on Android device
-
-# Clean
-./gradlew clean                    # Clean build artifacts
-```
-
-## 🏗️ Project Structure
-
-```
-TwilioVideo/
-├── mise.toml                      # Development environment configuration
-├── doc/
-│   ├── TWILIO_VIDEO_KMP_PLAN.md  # Complete project plan
-│   └── PHASE_1_TUTORIAL.md       # Phase 1 implementation guide
-├── composeApp/                    # Compose Multiplatform app
-│   ├── src/androidMain/           # Android-specific app code
-│   └── src/commonMain/            # Shared app code
-├── shared/                        # Shared business logic
-│   ├── src/commonMain/kotlin/     # Shared Kotlin code
-│   │   └── com/johnlai/twiliovideo/domain/video/
-│   │       ├── TwilioVideoManager.kt     # Main interface
-│   │       ├── VideoModels.kt            # Data models
-│   │       └── TwilioVideoManagerImpl.kt # Expected implementation
-│   ├── src/androidMain/kotlin/    # Android-specific implementations
-│   └── src/iosMain/kotlin/        # iOS-specific implementations
-└── iosApp/                        # iOS application
-    └── iosApp.xcodeproj/          # Xcode project
-```
-
-## 🎯 Current Status: Phase 1 Complete ✅
-
-### What's Working
-
-- ✅ **Core Architecture**: Shared interfaces and data models
-- ✅ **Platform Setup**: Android and iOS stub implementations  
-- ✅ **Build System**: KMP build configuration with dependencies
-- ✅ **Testing**: 13 comprehensive unit tests
-- ✅ **Documentation**: Complete planning and tutorial docs
-
-### Next: Phase 2 - Android Implementation
-
-The foundation is ready for Twilio Video SDK integration. See `doc/TWILIO_VIDEO_KMP_PLAN.md` for the complete roadmap.
-
-## 🧪 Testing
-
-```bash
-# Run all tests
-mise run test
-
-# Run specific module tests
-./gradlew shared:test              # Shared module tests
-./gradlew composeApp:testDebug     # Android app tests
-
-# Test specific classes
-./gradlew shared:test --tests "*TwilioVideoManagerTest*"
-./gradlew shared:test --tests "*VideoModelsTest*"
-```
-
-## 📱 Platform Development
-
-### Android Development
-
-```bash
-# Build and install
-mise run android-build
-./gradlew composeApp:installDebug
-
-# Run on emulator/device
-./gradlew composeApp:installDebug
-adb shell am start -n com.johnlai.twiliovideo/com.johnlai.twiliovideo.MainActivity
-```
-
-### iOS Development (macOS only)
-
-```bash
-# Setup iOS dependencies
-mise run ios-setup
-
-# Open in Xcode
-open iosApp/iosApp.xcodeproj
-
-# Or build from command line
-xcodebuild -project iosApp/iosApp.xcodeproj -scheme iosApp -destination 'platform=iOS Simulator,name=iPhone 15 Pro' build
-```
-
-## 🔧 Troubleshooting
-
-### Environment Issues
-
-```bash
-# Verify your environment
-mise run verify-env
-
-# Check tool versions
-mise list
-mise current
-
-# Reinstall tools if needed
+# Install project dependencies
 mise install
 ```
 
-### Common Issues
-
-1. **Android SDK not found**: Set `ANDROID_HOME` in your shell profile
-2. **Java version conflicts**: Use `mise use java@jetbrains-17.0.9` 
-3. **Gradle daemon issues**: Run `./gradlew --stop` then rebuild
-4. **iOS build failures**: Run `mise run ios-setup` and check Xcode version
-
-### Get Help
-
+### Phase 2 Environment Setup
 ```bash
-# Show development documentation
-mise run dev-docs
+# Set up Phase 2 testing environment
+mise run phase2-setup
 
-# View project plan
-cat doc/TWILIO_VIDEO_KMP_PLAN.md
-
-# View Phase 1 tutorial
-cat doc/PHASE_1_TUTORIAL.md
+# Verify everything works
+mise run phase2-test-check
 ```
 
-## 📚 Documentation
+### Build & Test
+```bash
+# Build the project
+./gradlew build
 
-- **[Project Plan](doc/TWILIO_VIDEO_KMP_PLAN.md)** - Complete 6-8 week implementation plan
-- **[Phase 1 Tutorial](doc/PHASE_1_TUTORIAL.md)** - Detailed Phase 1 implementation guide
-- **[Twilio Video Docs](https://www.twilio.com/docs/video)** - Official Twilio documentation
-- **[KMP Docs](https://kotlinlang.org/docs/multiplatform.html)** - Kotlin Multiplatform documentation
+# Run all tests (30 tests including TokenService tests)
+./gradlew shared:test
 
-## 🤝 Contributing
+# Build Android app
+./gradlew composeApp:assembleDebug
+```
 
-1. Clone the repository
-2. Run `mise run setup` to setup your environment
-3. Make your changes
-4. Run `mise run test` to ensure tests pass
-5. Submit a pull request
+## 📱 **How to Use the Video SDK**
 
-## 📄 License
+### Android Integration Example
 
-This project is part of the Remote TemiScript 2 application development.
+```kotlin
+// Create video manager with Android context
+val videoManager = TwilioVideoManagerFactory.create(context)
+
+// Connect to a video room
+val result = videoManager.connect(
+    accessToken = "", // Token will be fetched automatically from your API
+    roomName = "your-room-name"
+)
+
+// Observe connection state
+videoManager.connectionState.collect { state ->
+    when (state) {
+        is VideoConnectionState.Connected -> {
+            // Handle successful connection
+            println("Connected to room: ${state.room.name}")
+        }
+        is VideoConnectionState.Failed -> {
+            // Handle connection failure
+            println("Connection failed: ${state.error}")
+        }
+        // ... other states
+    }
+}
+
+// Manage camera and audio
+videoManager.enableCamera(true)
+videoManager.enableMicrophone(true)
+videoManager.switchCamera()
+
+// Clean up
+videoManager.disconnect()
+videoManager.release()
+```
+
+### Token Service Configuration
+
+Your API endpoint is automatically used:
+```json
+POST https://api.robocore.ai/twilio/video_token
+{
+  "userIdentity": "user",
+  "roomName": "a1b2c3d4e5"  // 10-character alphanumeric
+}
+```
+
+## 🏗️ **Architecture**
+
+```
+shared/
+├── commonMain/          # Shared interfaces and models
+│   ├── TwilioVideoManager.kt    # Main interface
+│   ├── VideoModels.kt           # Data models
+│   ├── TokenService.kt          # API client
+│   └── TwilioVideoManagerImpl.kt # Expect class
+├── androidMain/         # ✅ REAL Android implementation
+│   └── TwilioVideoManagerImpl.android.kt
+└── iosMain/            # 🔄 iOS stubs (ready for implementation)
+    └── TwilioVideoManagerImpl.ios.kt
+
+composeApp/              # Demo Android app
+iosApp/                  # Demo iOS app
+```
+
+## 🧪 **Testing**
+
+### Test Suite (30 tests passing)
+- **Unit Tests**: Data models, interfaces, and business logic
+- **Integration Tests**: Real Android functionality with context
+- **API Tests**: TokenService and HTTP client functionality
+- **Utility Tests**: Room name generation and API parameter validation
+
+### Run Tests
+```bash
+# All tests
+./gradlew shared:test
+
+# Android-specific tests (requires emulator)
+./gradlew shared:connectedAndroidTest
+
+# Verify environment
+mise run phase2-test-check
+```
+
+## 📊 **Dependencies**
+
+### Production Dependencies
+```kotlin
+// Twilio Video SDK
+implementation("com.twilio:video-android:7.6.0")
+
+// HTTP Client
+implementation("io.ktor:ktor-client-android:2.3.7")
+implementation("io.ktor:ktor-client-content-negotiation:2.3.7")
+implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.7")
+
+// Coroutines
+implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+```
+
+## 📋 **Next Steps**
+
+### Phase 3: iOS Implementation
+```bash
+# When ready to start iOS implementation
+# 1. Add Twilio Video iOS SDK
+# 2. Implement TwilioVideoManagerImpl.ios.kt
+# 3. iOS-specific UI components
+```
+
+### Phase 4: UI Development
+```bash
+# Android UI with Compose
+# iOS UI with SwiftUI
+# Video calling interface
+```
+
+## 🛠️ **Development Environment**
+
+### Mise Tasks
+```bash
+mise run verify-env          # Check all dependencies
+mise run phase2-setup        # Set up Phase 2 environment
+mise run phase2-test-check    # Verify Phase 2 setup
+mise run android-sdk-check    # Check Android SDK
+```
+
+### Environment Files
+- `.env.local` - Token service configuration (auto-generated)
+- `mise.toml` - Development environment automation
+
+## 📚 **Documentation**
+
+- [`doc/TWILIO_VIDEO_KMP_PLAN.md`](doc/TWILIO_VIDEO_KMP_PLAN.md) - Complete project plan and progress
+- [`doc/PHASE_1_TUTORIAL.md`](doc/PHASE_1_TUTORIAL.md) - Phase 1 architecture tutorial
+- [`doc/PHASE_2_TESTING_SETUP.md`](doc/PHASE_2_TESTING_SETUP.md) - Phase 2 testing environment guide
+
+## 🎯 **Key Achievements**
+
+✅ **Real Twilio Integration**: Working Android implementation with actual SDK  
+✅ **Your API Integration**: Using your existing token service  
+✅ **Clean Architecture**: Kotlin Multiplatform with expect/actual pattern  
+✅ **Reactive State**: Flow-based state management  
+✅ **Comprehensive Testing**: 30 tests covering all functionality  
+✅ **Development Automation**: One-command environment setup  
+✅ **Production Ready**: Ready for iOS implementation or Android UI development  
+
+---
+
+**Status**: ✅ Phase 2 Complete - Ready for iOS or UI Development! 🚀

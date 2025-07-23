@@ -61,7 +61,6 @@ description = "Complete project setup for new developers"
 run = [
     "echo '🚀 Setting up Twilio Video KMP project...'",
     "mise install",
-    "mise use",
     "mise run install-deps",
     "echo '📱 Checking Android SDK...'",
     "echo 'Please ensure Android SDK is installed at: $ANDROID_HOME'",

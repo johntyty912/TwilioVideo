@@ -194,7 +194,7 @@ actual class TwilioVideoManagerImpl actual constructor() : TwilioVideoManager {
                 
                 // Get token from your API service
                 val tokenResult = tokenService.getToken(
-                    userIdentity = tokenService.getStandardUserIdentity(),
+                    userIdentity = VideoConfig.testUserIdentity,
                     roomName = roomName
                 )
                 

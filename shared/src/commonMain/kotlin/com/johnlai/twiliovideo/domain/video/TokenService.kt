@@ -11,9 +11,9 @@ import kotlinx.serialization.json.Json
 
 /**
  * Token service client for getting Twilio video tokens
- * Uses a configurable API endpoint for token retrieval
+ * Uses configuration from VideoConfig (reads from .env.local via BuildConfig)
  */
-class TokenService(private val baseUrl: String = "https://your-api-endpoint.com") {
+class TokenService(private val baseUrl: String = VideoConfig.twilioTokenUrl) {
     
     private val httpClient = HttpClient {
         install(ContentNegotiation) {

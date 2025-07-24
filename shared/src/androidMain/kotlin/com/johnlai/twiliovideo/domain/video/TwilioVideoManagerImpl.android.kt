@@ -51,6 +51,9 @@ actual class TwilioVideoManagerImpl actual constructor() : TwilioVideoManager {
     override val localVideoTrack: Flow<VideoTrack?> = _localVideoTrack.map { it?.toVideoTrack() }
     override val networkQuality: Flow<NetworkQuality> = _networkQuality.asStateFlow()
     
+    // Expose raw LocalVideoTrack for UI rendering
+    val rawLocalVideoTrack: Flow<LocalVideoTrack?> = _localVideoTrack.asStateFlow()
+    
     // Room listener for handling Twilio SDK events
     private val roomListener = object : Room.Listener {
         override fun onConnected(room: Room) {
@@ -283,8 +286,22 @@ actual class TwilioVideoManagerImpl actual constructor() : TwilioVideoManager {
                     context?.let { setupLocalVideoTrack(it) }
                 }
                 _localVideoTrack.value?.enable(true)
+                
+                // Publish video track to room if connected
+                _room.value?.let { room ->
+                    _localVideoTrack.value?.let { videoTrack ->
+                        room.localParticipant?.publishTrack(videoTrack)
+                    }
+                }
             } else {
                 _localVideoTrack.value?.enable(false)
+                
+                // Unpublish video track from room if connected
+                _room.value?.let { room ->
+                    _localVideoTrack.value?.let { videoTrack ->
+                        room.localParticipant?.unpublishTrack(videoTrack)
+                    }
+                }
             }
             VideoResult.Success(Unit)
         } catch (e: Exception) {

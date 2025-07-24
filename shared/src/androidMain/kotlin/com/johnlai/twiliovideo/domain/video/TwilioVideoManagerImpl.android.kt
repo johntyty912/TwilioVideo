@@ -2,10 +2,12 @@ package com.johnlai.twiliovideo.domain.video
 
 import android.content.Context
 import com.twilio.video.*
-import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
@@ -23,12 +25,10 @@ actual class TwilioVideoManagerImpl actual constructor() : TwilioVideoManager {
         this.context = context
     }
     
-    // Twilio SDK objects
+    // Private state flows
     private val _room = MutableStateFlow<Room?>(null)
-    private val _localVideoTrack = MutableStateFlow<LocalVideoTrack?>(null)
-    private val _localAudioTrack = MutableStateFlow<LocalAudioTrack?>(null)
-    private val _cameraCapture = MutableStateFlow<CameraCapturer?>(null)
     private val _participants = MutableStateFlow<List<VideoParticipant>>(emptyList())
+    private val _connectionState = MutableStateFlow<VideoConnectionState>(VideoConnectionState.Disconnected)
     private val _networkQuality = MutableStateFlow(
         NetworkQuality(
             level = 0,
@@ -40,19 +40,12 @@ actual class TwilioVideoManagerImpl actual constructor() : TwilioVideoManager {
         )
     )
     
-    // Flow properties
-    override val connectionState: Flow<VideoConnectionState> = 
-        _room.map { room ->
-            when {
-                room == null -> VideoConnectionState.Disconnected
-                room.state == Room.State.CONNECTED -> {
-                    VideoConnectionState.Connected(room.toVideoRoom())
-                }
-                room.state == Room.State.CONNECTING -> VideoConnectionState.Connecting
-                room.state == Room.State.RECONNECTING -> VideoConnectionState.Reconnecting
-                else -> VideoConnectionState.Failed(VideoError.ConnectionFailed)
-            }
-        }
+    // Local media tracks
+    private var _localVideoTrack = MutableStateFlow<LocalVideoTrack?>(null)
+    private var _localAudioTrack = MutableStateFlow<LocalAudioTrack?>(null)
+    private val _cameraCapture = MutableStateFlow<CameraCapturer?>(null)
+    
+    override val connectionState: Flow<VideoConnectionState> = _connectionState.asStateFlow()
     
     override val participants: Flow<List<VideoParticipant>> = _participants.asStateFlow()
     override val localVideoTrack: Flow<VideoTrack?> = _localVideoTrack.map { it?.toVideoTrack() }
@@ -61,41 +54,55 @@ actual class TwilioVideoManagerImpl actual constructor() : TwilioVideoManager {
     // Room listener for handling Twilio SDK events
     private val roomListener = object : Room.Listener {
         override fun onConnected(room: Room) {
+            println("RoomListener: onConnected - room: ${room.name}, participants: ${room.remoteParticipants.size}")
+            println("RoomListener: onConnected - room.state: ${room.state}")
+            println("RoomListener: Setting connection state to Connected")
+            _connectionState.value = VideoConnectionState.Connected(room.toVideoRoom())
+            println("RoomListener: Setting _room.value to connected room...")
             _room.value = room
+            println("RoomListener: _room.value set successfully")
             updateParticipants(room)
         }
         
         override fun onConnectFailure(room: Room, twilioException: TwilioException) {
-            // Connection failed
+            println("RoomListener: onConnectFailure - ${twilioException.message}")
+            twilioException.printStackTrace()
         }
         
         override fun onParticipantConnected(room: Room, participant: RemoteParticipant) {
+            println("RoomListener: onParticipantConnected - ${participant.identity}")
             updateParticipants(room)
             // Set up participant listener
             participant.setListener(participantListener)
         }
         
         override fun onParticipantDisconnected(room: Room, participant: RemoteParticipant) {
+            println("RoomListener: onParticipantDisconnected - ${participant.identity}")
             updateParticipants(room)
         }
         
         override fun onReconnecting(room: Room, twilioException: TwilioException) {
-            // Room is reconnecting
+            println("RoomListener: onReconnecting - ${twilioException.message}")
+            _connectionState.value = VideoConnectionState.Reconnecting
         }
         
         override fun onReconnected(room: Room) {
+            println("RoomListener: onReconnected - room: ${room.name}")
+            _connectionState.value = VideoConnectionState.Connected(room.toVideoRoom())
             updateParticipants(room)
         }
         
         override fun onRecordingStarted(room: Room) {
-            // Recording started
+            println("RoomListener: onRecordingStarted")
         }
         
         override fun onRecordingStopped(room: Room) {
-            // Recording stopped
+            println("RoomListener: onRecordingStopped")
         }
         
         override fun onDisconnected(room: Room, twilioException: TwilioException?) {
+            println("RoomListener: onDisconnected - ${twilioException?.message ?: "No error"}")
+            _connectionState.value = VideoConnectionState.Disconnected
             _room.value = null
             _participants.value = emptyList()
         }
@@ -192,6 +199,8 @@ actual class TwilioVideoManagerImpl actual constructor() : TwilioVideoManager {
             try {
                 val appContext = context ?: throw IllegalStateException("Context not provided")
                 
+                println("VideoManager: Starting connection to room: $roomName")
+                
                 // Get token from your API service
                 val tokenResult = tokenService.getToken(
                     userIdentity = VideoConfig.testUserIdentity,
@@ -199,32 +208,48 @@ actual class TwilioVideoManagerImpl actual constructor() : TwilioVideoManager {
                 )
                 
                 val token = when (tokenResult) {
-                    is VideoResult.Success -> tokenResult.data
-                    is VideoResult.Error -> return@withContext VideoResult.Error(tokenResult.error)
+                    is VideoResult.Success -> {
+                        println("VideoManager: Token received successfully")
+                        tokenResult.data
+                    }
+                    is VideoResult.Error -> {
+                        println("VideoManager: Token error: ${tokenResult.error}")
+                        return@withContext VideoResult.Error(tokenResult.error)
+                    }
                 }
                 
+                println("VideoManager: Setting up local media tracks...")
                 // Setup local media tracks
                 setupLocalMediaTracks(appContext)
                 
+                println("VideoManager: Creating connect options...")
                 // Connect to room
                 val connectOptionsBuilder = ConnectOptions.Builder(token)
                     .roomName(roomName)
                 
                 // Add local tracks if available
                 _localVideoTrack.value?.let { 
+                    println("VideoManager: Adding local video track")
                     connectOptionsBuilder.videoTracks(listOf(it))
                 }
                 _localAudioTrack.value?.let { 
+                    println("VideoManager: Adding local audio track")
                     connectOptionsBuilder.audioTracks(listOf(it))
                 }
                 
                 val connectOptions = connectOptionsBuilder.build()
+                println("VideoManager: Setting connection state to Connecting")
+                _connectionState.value = VideoConnectionState.Connecting
+                println("VideoManager: Calling Video.connect...")
                 val room = Video.connect(appContext, connectOptions, roomListener)
                 _room.value = room
                 
+                println("VideoManager: Video.connect returned, room state: ${room.state}")
                 VideoResult.Success(room.toVideoRoom())
                 
             } catch (e: Exception) {
+                println("VideoManager: Connection error: ${e.message}")
+                e.printStackTrace()
                 VideoResult.Error(VideoError.ConnectionFailed)
             }
         }

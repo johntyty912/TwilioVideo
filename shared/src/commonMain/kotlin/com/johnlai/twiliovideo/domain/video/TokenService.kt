@@ -13,7 +13,7 @@ import kotlinx.serialization.json.Json
  * Token service client for getting Twilio video tokens
  * Uses configuration from VideoConfig (reads from .env.local via BuildConfig)
  */
-class TokenService(private val baseUrl: String = VideoConfig.twilioTokenUrl) {
+class TokenService(private val tokenUrl: String = VideoConfig.twilioTokenUrl) {
     
     private val httpClient = HttpClient {
         install(ContentNegotiation) {
@@ -54,19 +54,25 @@ class TokenService(private val baseUrl: String = VideoConfig.twilioTokenUrl) {
      */
     suspend fun getToken(userIdentity: String, roomName: String): VideoResult<String> {
         return try {
+            println("TokenService: Requesting token from $tokenUrl")
+            println("TokenService: Request - userIdentity: $userIdentity, roomName: $roomName")
+            
             val request = GetTokenRequest(
                 userIdentity = userIdentity,
                 roomName = roomName
             )
             
-            val response: GetTokenResponse = httpClient.post("$baseUrl/twilio/video_token") {
+            val response: GetTokenResponse = httpClient.post(tokenUrl) {
                 contentType(ContentType.Application.Json)
                 setBody(request)
             }.body()
             
+            println("TokenService: Response received - token length: ${response.token.length}")
             VideoResult.Success(response.token)
             
         } catch (e: Exception) {
+            println("TokenService: Error - ${e.message}")
+            e.printStackTrace()
             VideoResult.Error(VideoError.NetworkError)
         }
     }

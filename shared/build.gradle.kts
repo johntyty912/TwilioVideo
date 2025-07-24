@@ -21,6 +21,7 @@ val envProps = readEnvFile()
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidLibrary)
+    kotlin("plugin.serialization") version "2.2.0"
 }
 
 kotlin {

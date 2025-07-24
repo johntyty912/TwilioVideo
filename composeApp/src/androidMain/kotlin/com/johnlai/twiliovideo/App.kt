@@ -10,6 +10,13 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.johnlai.twiliovideo.domain.video.*
 import kotlinx.coroutines.launch
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -27,6 +34,31 @@ fun VideoCallDemo() {
     
     var roomName by remember { mutableStateOf("") }
     var connectionStatus by remember { mutableStateOf("Disconnected") }
+    var permissionsGranted by remember { mutableStateOf(false) }
+    
+    // Permission launcher
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        permissionsGranted = permissions[Manifest.permission.CAMERA] == true && 
+                           permissions[Manifest.permission.RECORD_AUDIO] == true
+    }
+    
+    // Check permissions on start
+    LaunchedEffect(Unit) {
+        val cameraPermission = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
+        val audioPermission = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO)
+        
+        if (cameraPermission == PackageManager.PERMISSION_GRANTED && 
+            audioPermission == PackageManager.PERMISSION_GRANTED) {
+            permissionsGranted = true
+        } else {
+            permissionLauncher.launch(arrayOf(
+                Manifest.permission.CAMERA,
+                Manifest.permission.RECORD_AUDIO
+            ))
+        }
+    }
     
     // Observe connection state
     val connectionState by videoManager.connectionState.collectAsStateWithLifecycle(
@@ -54,6 +86,20 @@ fun VideoCallDemo() {
             text = "🎥 Twilio Video KMP Demo",
             style = MaterialTheme.typography.headlineMedium
         )
+        
+        // Permissions status
+        if (!permissionsGranted) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+            ) {
+                Text(
+                    text = "⚠️ Camera and microphone permissions required",
+                    modifier = Modifier.padding(16.dp),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        }
         
         Text(
             text = "Status: $connectionStatus",
@@ -107,7 +153,8 @@ fun VideoCallDemo() {
                     scope.launch {
                         videoManager.enableCamera(true)
                     }
-                }
+                },
+                enabled = permissionsGranted
             ) {
                 Text("📹 Camera On")
             }
@@ -117,7 +164,8 @@ fun VideoCallDemo() {
                     scope.launch {
                         videoManager.enableCamera(false)
                     }
-                }
+                },
+                enabled = permissionsGranted
             ) {
                 Text("📹 Camera Off")
             }
@@ -129,7 +177,8 @@ fun VideoCallDemo() {
                     scope.launch {
                         videoManager.enableMicrophone(true)
                     }
-                }
+                },
+                enabled = permissionsGranted
             ) {
                 Text("🎤 Mic On")
             }
@@ -139,7 +188,8 @@ fun VideoCallDemo() {
                     scope.launch {
                         videoManager.enableMicrophone(false)
                     }
-                }
+                },
+                enabled = permissionsGranted
             ) {
                 Text("🎤 Mic Off")
             }
@@ -150,7 +200,8 @@ fun VideoCallDemo() {
                 scope.launch {
                     videoManager.switchCamera()
                 }
-            }
+            },
+            enabled = permissionsGranted
         ) {
             Text("🔄 Switch Camera")
         }

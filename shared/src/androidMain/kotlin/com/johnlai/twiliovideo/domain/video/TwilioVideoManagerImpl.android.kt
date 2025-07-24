@@ -343,13 +343,41 @@ actual class TwilioVideoManagerImpl actual constructor() : TwilioVideoManager {
         }
     }
     
+    private var isUsingFrontCamera = true
+
     override suspend fun switchCamera(): VideoResult<Unit> {
         return try {
-            // Switch to back camera (camera ID "1")
-            (_cameraCapture.value as? CameraCapturer)?.switchCamera("1")
+            val capturer = _cameraCapture.value
+            if (capturer is com.twilio.video.Camera2Capturer) {
+                val cameraManager = context?.getSystemService(Context.CAMERA_SERVICE) as? android.hardware.camera2.CameraManager
+                if (cameraManager == null) return VideoResult.Error(VideoError.UnknownError("CameraManager unavailable"))
+                val cameraIds = cameraManager.cameraIdList
+                var newCameraId: String? = null
+                for (cameraId in cameraIds) {
+                    try {
+                        val characteristics = cameraManager.getCameraCharacteristics(cameraId)
+                        val facing = characteristics.get(android.hardware.camera2.CameraCharacteristics.LENS_FACING)
+                        if (isUsingFrontCamera && facing == android.hardware.camera2.CameraCharacteristics.LENS_FACING_BACK) {
+                            newCameraId = cameraId
+                            break
+                        } else if (!isUsingFrontCamera && facing == android.hardware.camera2.CameraCharacteristics.LENS_FACING_FRONT) {
+                            newCameraId = cameraId
+                            break
+                        }
+                    } catch (_: Exception) {}
+                }
+                if (newCameraId != null) {
+                    capturer.switchCamera(newCameraId)
+                    isUsingFrontCamera = !isUsingFrontCamera
+                }
+            } else if (capturer is com.twilio.video.CameraCapturer) {
+                val newSource = if (isUsingFrontCamera) "back_camera" else "front_camera"
+                capturer.switchCamera(newSource)
+                isUsingFrontCamera = !isUsingFrontCamera
+            }
             VideoResult.Success(Unit)
         } catch (e: Exception) {
-            VideoResult.Error(VideoError.UnknownError("Camera switch failed"))
+            VideoResult.Error(VideoError.UnknownError("Camera switch failed: ${e.message}"))
         }
     }
     

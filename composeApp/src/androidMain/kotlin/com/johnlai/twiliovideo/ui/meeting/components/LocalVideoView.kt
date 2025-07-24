@@ -28,6 +28,13 @@ fun LocalVideoView(
             ?: kotlinx.coroutines.flow.flowOf(null)
     }.collectAsStateWithLifecycle(initialValue = null)
     
+    // Debug logging
+    LaunchedEffect(rawLocalVideoTrack, isVideoEnabled) {
+        println("LocalVideoView: rawLocalVideoTrack = $rawLocalVideoTrack")
+        println("LocalVideoView: isVideoEnabled = $isVideoEnabled")
+        println("LocalVideoView: should show video = ${isVideoEnabled && rawLocalVideoTrack != null}")
+    }
+    
     Card(
         modifier = Modifier
             .fillMaxWidth()

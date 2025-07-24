@@ -1,6 +1,8 @@
 package com.johnlai.twiliovideo.domain.video
 
 import android.content.Context
+
+import android.util.Log
 import com.twilio.video.*
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -43,7 +45,7 @@ actual class TwilioVideoManagerImpl actual constructor() : TwilioVideoManager {
     // Local media tracks
     private var _localVideoTrack = MutableStateFlow<LocalVideoTrack?>(null)
     private var _localAudioTrack = MutableStateFlow<LocalAudioTrack?>(null)
-    private val _cameraCapture = MutableStateFlow<CameraCapturer?>(null)
+    private val _cameraCapture = MutableStateFlow<VideoCapturer?>(null)
     
     override val connectionState: Flow<VideoConnectionState> = _connectionState.asStateFlow()
     
@@ -57,54 +59,54 @@ actual class TwilioVideoManagerImpl actual constructor() : TwilioVideoManager {
     // Room listener for handling Twilio SDK events
     private val roomListener = object : Room.Listener {
         override fun onConnected(room: Room) {
-            println("RoomListener: onConnected - room: ${room.name}, participants: ${room.remoteParticipants.size}")
-            println("RoomListener: onConnected - room.state: ${room.state}")
-            println("RoomListener: Setting connection state to Connected")
+            Log.d("RoomListener", "onConnected - room: ${room.name}, participants: ${room.remoteParticipants.size}")
+            Log.d("RoomListener", "onConnected - room.state: ${room.state}")
+            Log.d("RoomListener", "Setting connection state to Connected")
             _connectionState.value = VideoConnectionState.Connected(room.toVideoRoom())
-            println("RoomListener: Setting _room.value to connected room...")
+            Log.d("RoomListener", "Setting _room.value to connected room...")
             _room.value = room
-            println("RoomListener: _room.value set successfully")
+            Log.d("RoomListener", "RoomListener: _room.value set successfully")
             updateParticipants(room)
         }
         
         override fun onConnectFailure(room: Room, twilioException: TwilioException) {
-            println("RoomListener: onConnectFailure - ${twilioException.message}")
+            Log.d("RoomListener", "onConnectFailure - ${twilioException.message}")
             twilioException.printStackTrace()
         }
         
         override fun onParticipantConnected(room: Room, participant: RemoteParticipant) {
-            println("RoomListener: onParticipantConnected - ${participant.identity}")
+            Log.d("RoomListener", "onParticipantConnected - ${participant.identity}")
             updateParticipants(room)
             // Set up participant listener
             participant.setListener(participantListener)
         }
         
         override fun onParticipantDisconnected(room: Room, participant: RemoteParticipant) {
-            println("RoomListener: onParticipantDisconnected - ${participant.identity}")
+            Log.d("RoomListener", "onParticipantDisconnected - ${participant.identity}")
             updateParticipants(room)
         }
         
         override fun onReconnecting(room: Room, twilioException: TwilioException) {
-            println("RoomListener: onReconnecting - ${twilioException.message}")
+            Log.d("RoomListener", "onReconnecting - ${twilioException.message}")
             _connectionState.value = VideoConnectionState.Reconnecting
         }
         
         override fun onReconnected(room: Room) {
-            println("RoomListener: onReconnected - room: ${room.name}")
+            Log.d("RoomListener", "onReconnected - room: ${room.name}")
             _connectionState.value = VideoConnectionState.Connected(room.toVideoRoom())
             updateParticipants(room)
         }
         
         override fun onRecordingStarted(room: Room) {
-            println("RoomListener: onRecordingStarted")
+            Log.d("RoomListener", "onRecordingStarted")
         }
         
         override fun onRecordingStopped(room: Room) {
-            println("RoomListener: onRecordingStopped")
+            Log.d("RoomListener", "onRecordingStopped")
         }
         
         override fun onDisconnected(room: Room, twilioException: TwilioException?) {
-            println("RoomListener: onDisconnected - ${twilioException?.message ?: "No error"}")
+            Log.d("RoomListener", "onDisconnected - ${twilioException?.message ?: "No error"}")
             _connectionState.value = VideoConnectionState.Disconnected
             _room.value = null
             _participants.value = emptyList()
@@ -202,7 +204,7 @@ actual class TwilioVideoManagerImpl actual constructor() : TwilioVideoManager {
             try {
                 val appContext = context ?: throw IllegalStateException("Context not provided")
                 
-                println("VideoManager: Starting connection to room: $roomName")
+                Log.d("VideoManager", "Starting connection to room: $roomName")
                 
                 // Get token from your API service
                 val tokenResult = tokenService.getToken(
@@ -212,46 +214,46 @@ actual class TwilioVideoManagerImpl actual constructor() : TwilioVideoManager {
                 
                 val token = when (tokenResult) {
                     is VideoResult.Success -> {
-                        println("VideoManager: Token received successfully")
+                        Log.d("VideoManager", "Token received successfully")
                         tokenResult.data
                     }
                     is VideoResult.Error -> {
-                        println("VideoManager: Token error: ${tokenResult.error}")
+                        Log.d("VideoManager", "Token error: ${tokenResult.error}")
                         return@withContext VideoResult.Error(tokenResult.error)
                     }
                 }
                 
-                println("VideoManager: Setting up local media tracks...")
+                Log.d("VideoManager", "Setting up local media tracks...")
                 // Setup local media tracks
                 setupLocalMediaTracks(appContext)
                 
-                println("VideoManager: Creating connect options...")
+                Log.d("VideoManager", "Creating connect options...")
                 // Connect to room
                 val connectOptionsBuilder = ConnectOptions.Builder(token)
                     .roomName(roomName)
                 
                 // Add local tracks if available
                 _localVideoTrack.value?.let { 
-                    println("VideoManager: Adding local video track")
+                    Log.d("VideoManager", "Adding local video track")
                     connectOptionsBuilder.videoTracks(listOf(it))
                 }
                 _localAudioTrack.value?.let { 
-                    println("VideoManager: Adding local audio track")
+                    Log.d("VideoManager", "Adding local audio track")
                     connectOptionsBuilder.audioTracks(listOf(it))
                 }
                 
                 val connectOptions = connectOptionsBuilder.build()
-                println("VideoManager: Setting connection state to Connecting")
+                Log.d("VideoManager", "Setting connection state to Connecting")
                 _connectionState.value = VideoConnectionState.Connecting
-                println("VideoManager: Calling Video.connect...")
+                Log.d("VideoManager", "Calling Video.connect...")
                 val room = Video.connect(appContext, connectOptions, roomListener)
                 _room.value = room
                 
-                println("VideoManager: Video.connect returned, room state: ${room.state}")
+                Log.d("VideoManager", "Video.connect returned, room state: ${room.state}")
                 VideoResult.Success(room.toVideoRoom())
                 
             } catch (e: Exception) {
-                println("VideoManager: Connection error: ${e.message}")
+                Log.d("VideoManager", "Connection error: ${e.message}")
                 e.printStackTrace()
                 VideoResult.Error(VideoError.ConnectionFailed)
             }
@@ -280,32 +282,48 @@ actual class TwilioVideoManagerImpl actual constructor() : TwilioVideoManager {
     }
     
     override suspend fun enableCamera(enable: Boolean): VideoResult<Unit> {
-        return try {
-            if (enable) {
-                if (_localVideoTrack.value == null) {
-                    context?.let { setupLocalVideoTrack(it) }
-                }
-                _localVideoTrack.value?.enable(true)
-                
-                // Publish video track to room if connected
-                _room.value?.let { room ->
-                    _localVideoTrack.value?.let { videoTrack ->
-                        room.localParticipant?.publishTrack(videoTrack)
+        return withContext(Dispatchers.IO) {
+            try {
+                Log.d("VideoManager", "enableCamera called with enable=$enable")
+                if (enable) {
+                    if (_localVideoTrack.value == null) {
+                        Log.d("VideoManager", "No local video track, setting up...")
+                        context?.let { ctx ->
+                            setupLocalVideoTrack(ctx)
+                            // Give it a moment to initialize
+                            kotlinx.coroutines.delay(100)
+                        }
+                    }
+                    Log.d("VideoManager", "Enabling video track...")
+                    _localVideoTrack.value?.enable(true)
+                    Log.d("VideoManager", "Video track after enable: ${_localVideoTrack.value}")
+                    Log.d("VideoManager", "Video track enabled state: ${_localVideoTrack.value?.isEnabled}")
+                    
+                    // Publish video track to room if connected
+                    _room.value?.let { room ->
+                        _localVideoTrack.value?.let { videoTrack ->
+                            Log.d("VideoManager", "Publishing video track to room...")
+                            room.localParticipant?.publishTrack(videoTrack)
+                        }
+                    }
+                } else {
+                    Log.d("VideoManager", "Disabling video track...")
+                    _localVideoTrack.value?.enable(false)
+                    
+                    // Unpublish video track from room if connected
+                    _room.value?.let { room ->
+                        _localVideoTrack.value?.let { videoTrack ->
+                            Log.d("VideoManager", "Unpublishing video track from room...")
+                            room.localParticipant?.unpublishTrack(videoTrack)
+                        }
                     }
                 }
-            } else {
-                _localVideoTrack.value?.enable(false)
-                
-                // Unpublish video track from room if connected
-                _room.value?.let { room ->
-                    _localVideoTrack.value?.let { videoTrack ->
-                        room.localParticipant?.unpublishTrack(videoTrack)
-                    }
-                }
+                VideoResult.Success(Unit)
+            } catch (e: Exception) {
+                Log.d("VideoManager", "enableCamera error: ${e.message}")
+                e.printStackTrace()
+                VideoResult.Error(VideoError.PermissionDenied)
             }
-            VideoResult.Success(Unit)
-        } catch (e: Exception) {
-            VideoResult.Error(VideoError.PermissionDenied)
         }
     }
     
@@ -404,18 +422,99 @@ actual class TwilioVideoManagerImpl actual constructor() : TwilioVideoManager {
     
     private fun setupLocalVideoTrack(context: Context) {
         try {
-            if (_cameraCapture.value == null && _localVideoTrack.value == null) {
-                // Create a basic camera capturer using string-based camera ID
-                val cameraCapture = CameraCapturer(context, "0")
-                _cameraCapture.value = cameraCapture
-                
-                // Create video track with camera capturer
-                val videoTrack = LocalVideoTrack.create(context, true, cameraCapture as VideoCapturer)
-                _localVideoTrack.value = videoTrack
+            Log.d("VideoManager", "setupLocalVideoTrack called")
+            if (_localVideoTrack.value == null) {
+                Log.d("VideoManager", "Creating video track with Twilio Camera2Capturer, fallback to CameraCapturer if needed...")
+                try {
+                    // Get available camera IDs using Android CameraManager
+                    val cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as android.hardware.camera2.CameraManager
+                    val cameraIds = cameraManager.cameraIdList
+                    Log.d("VideoManager", "CameraManager found camera IDs: ${cameraIds.joinToString(", ")}")
+                    if (cameraIds.isEmpty()) throw Exception("No cameras found")
+
+                    // Try to find front camera first
+                    var selectedCameraId: String? = null
+                    for (cameraId in cameraIds) {
+                        try {
+                            val characteristics = cameraManager.getCameraCharacteristics(cameraId)
+                            val facing = characteristics.get(android.hardware.camera2.CameraCharacteristics.LENS_FACING)
+                            if (facing == android.hardware.camera2.CameraCharacteristics.LENS_FACING_FRONT) {
+                                selectedCameraId = cameraId
+                                Log.d("VideoManager", "Selected front camera: '$cameraId'")
+                                break
+                            }
+                        } catch (e: Exception) {
+                            Log.d("VideoManager", "Error checking camera $cameraId: ${e.message}")
+                        }
+                    }
+                    if (selectedCameraId == null) {
+                        selectedCameraId = cameraIds.first()
+                        Log.d("VideoManager", "No front camera found, using first available: '$selectedCameraId'")
+                    }
+
+                    // Try Twilio Camera2Capturer first
+                    try {
+                        Log.d("VideoManager", "Trying Twilio Camera2Capturer with camera ID: '$selectedCameraId'")
+                        val camera2Capturer = com.twilio.video.Camera2Capturer(context, selectedCameraId, object : com.twilio.video.Camera2Capturer.Listener {
+                            override fun onFirstFrameAvailable() { Log.d("VideoManager", "Camera2Capturer: First frame available") }
+                            override fun onCameraSwitched(newCameraId: String) { Log.d("VideoManager", "Camera2Capturer: Camera switched to $newCameraId") }
+                            override fun onError(e: com.twilio.video.Camera2Capturer.Exception) { Log.d("VideoManager", "Camera2Capturer error: ${e.message}") }
+                        })
+                        _cameraCapture.value = camera2Capturer
+                        val videoTrack = com.twilio.video.LocalVideoTrack.create(context, true, camera2Capturer)
+                        if (videoTrack != null) {
+                            _localVideoTrack.value = videoTrack
+                            Log.d("VideoManager", "🎉 SUCCESS! LocalVideoTrack created with Twilio Camera2Capturer!")
+                            Log.d("VideoManager", "Video track enabled: ${videoTrack.isEnabled}")
+                            Log.d("VideoManager", "Video track name: ${videoTrack.name}")
+                            camera2Capturer.startCapture(640, 480, 30)
+                            Log.d("VideoManager", "Camera2Capturer capture started successfully")
+                            return
+                        } else {
+                            Log.d("VideoManager", "LocalVideoTrack.create returned null for Camera2Capturer")
+                        }
+                    } catch (e: Exception) {
+                        Log.d("VideoManager", "Camera2Capturer failed: ${e.message}")
+                    }
+
+                    // Fallback: Try Twilio CameraCapturer (Camera1 API)
+                    try {
+                        Log.d("VideoManager", "Falling back to Twilio CameraCapturer (Camera1 API)...")
+                        val cameraCapturer = com.twilio.video.CameraCapturer(context, "front_camera")
+                        _cameraCapture.value = cameraCapturer
+                        val videoTrack = com.twilio.video.LocalVideoTrack.create(context, true, cameraCapturer)
+                        if (videoTrack != null) {
+                            _localVideoTrack.value = videoTrack
+                            Log.d("VideoManager", "🎉 SUCCESS! LocalVideoTrack created with Twilio CameraCapturer (Camera1 API)!")
+                            Log.d("VideoManager", "Video track enabled: ${videoTrack.isEnabled}")
+                            Log.d("VideoManager", "Video track name: ${videoTrack.name}")
+                            cameraCapturer.startCapture(640, 480, 30)
+                            Log.d("VideoManager", "CameraCapturer (Camera1) capture started successfully")
+                            return
+                        } else {
+                            Log.d("VideoManager", "LocalVideoTrack.create returned null for CameraCapturer (Camera1 API)")
+                        }
+                    } catch (e: Exception) {
+                        Log.d("VideoManager", "CameraCapturer (Camera1 API) failed: ${e.message}")
+                    }
+
+                    throw Exception("All Twilio camera capturer attempts failed!")
+                } catch (e: Exception) {
+                    Log.d("VideoManager", "Camera setup failed: ${e.message}")
+                    e.printStackTrace()
+                    // Clean up on failure
+                    _cameraCapture.value = null
+                    _localVideoTrack.value = null
+                }
+            } else {
+                Log.d("VideoManager", "Video track already exists: ${_localVideoTrack.value}")
             }
         } catch (e: Exception) {
-            // Camera setup failed - create video track without camera for now
-            // This is a fallback approach
+            Log.d("VideoManager", "Camera setup failed: ${e.message}")
+            e.printStackTrace()
+            // Clean up on failure
+            _cameraCapture.value = null
+            _localVideoTrack.value = null
         }
     }
     

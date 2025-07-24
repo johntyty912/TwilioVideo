@@ -84,6 +84,12 @@ kotlin {
                 implementation("io.ktor:ktor-client-android:2.3.7")
                 // Android-specific logging (optional)
                 implementation("io.ktor:ktor-client-logging:2.3.7")
+                
+                // Add CameraX dependencies (for future use)
+                implementation("androidx.camera:camera-core:1.3.0")
+                implementation("androidx.camera:camera-camera2:1.3.0")
+                implementation("androidx.camera:camera-lifecycle:1.3.0")
+                implementation("androidx.camera:camera-view:1.3.0")
             }
         }
         

@@ -581,7 +581,8 @@ private fun RemoteVideoTrackPublication.toVideoTrack(): VideoTrack {
         sid = this.trackSid,
         name = this.trackName,
         isEnabled = this.isTrackEnabled,
-        participantSid = "" // Would need participant reference
+        participantSid = "", // Would need participant reference
+        remoteVideoTrack = this.remoteVideoTrack // <-- add this
     )
 }
 

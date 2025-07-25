@@ -24,47 +24,51 @@ fun TwilioVideoView(
     placeholder: @Composable () -> Unit = {}
 ) {
     val context = LocalContext.current
-    
+    val videoViewKey = remember(localVideoTrack, remoteVideoTrack) {
+        (localVideoTrack?.hashCode() ?: 0) + (remoteVideoTrack?.hashCode() ?: 0)
+    }
+    val videoViewRef = remember { mutableStateOf<VideoView?>(null) }
+
     if (localVideoTrack != null || remoteVideoTrack != null) {
-        AndroidView(
-            factory = { ctx ->
-                VideoView(ctx).apply {
-                    // Configure the video view
-                    mirror = localVideoTrack != null // Mirror local video
-                }
-            },
-            update = { videoView ->
-                // Remove previous video tracks
-                localVideoTrack?.removeSink(videoView)
-                remoteVideoTrack?.removeSink(videoView)
-                
-                // Attach the appropriate video track
-                when {
-                    localVideoTrack != null -> {
-                        localVideoTrack.addSink(videoView)
+        key(videoViewKey) {
+            AndroidView(
+                factory = { ctx ->
+                    VideoView(ctx).apply {
+                        mirror = localVideoTrack != null
+                        videoViewRef.value = this
                     }
-                    remoteVideoTrack != null -> {
-                        remoteVideoTrack.addSink(videoView)
+                },
+                update = { videoView: VideoView ->
+                    // Remove all sinks first to avoid duplicates
+                    localVideoTrack?.removeSink(videoView)
+                    remoteVideoTrack?.removeSink(videoView)
+                    // Attach the appropriate video track
+                    when {
+                        localVideoTrack != null -> {
+                            localVideoTrack.addSink(videoView)
+                        }
+                        remoteVideoTrack != null -> {
+                            remoteVideoTrack.addSink(videoView)
+                        }
                     }
+                },
+                modifier = modifier.clip(RoundedCornerShape(12.dp))
+            )
+        }
+        DisposableEffect(localVideoTrack, remoteVideoTrack) {
+            onDispose {
+                videoViewRef.value?.let { view ->
+                    runCatching { localVideoTrack?.removeSink(view) }
+                    runCatching { remoteVideoTrack?.removeSink(view) }
                 }
-            },
-            modifier = modifier
-                .clip(RoundedCornerShape(12.dp))
-        )
+            }
+        }
     } else {
-        // Show placeholder when no video track is available
         Box(
             modifier = modifier,
             contentAlignment = Alignment.Center
         ) {
             placeholder()
-        }
-    }
-    
-    // Clean up when composable is disposed
-    DisposableEffect(localVideoTrack, remoteVideoTrack) {
-        onDispose {
-            // VideoView handles cleanup automatically when removed from parent
         }
     }
 } 

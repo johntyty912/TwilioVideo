@@ -189,8 +189,12 @@ actual class TwilioVideoManagerImpl actual constructor() : TwilioVideoManager {
         
         override fun onVideoTrackPublished(participant: RemoteParticipant, publication: RemoteVideoTrackPublication) {}
         override fun onVideoTrackUnpublished(participant: RemoteParticipant, publication: RemoteVideoTrackPublication) {}
-        override fun onVideoTrackEnabled(participant: RemoteParticipant, publication: RemoteVideoTrackPublication) {}
-        override fun onVideoTrackDisabled(participant: RemoteParticipant, publication: RemoteVideoTrackPublication) {}
+        override fun onVideoTrackEnabled(participant: RemoteParticipant, publication: RemoteVideoTrackPublication) {
+            _room.value?.let { updateParticipants(it) }
+        }
+        override fun onVideoTrackDisabled(participant: RemoteParticipant, publication: RemoteVideoTrackPublication) {
+            _room.value?.let { updateParticipants(it) }
+        }
         override fun onAudioTrackPublished(participant: RemoteParticipant, publication: RemoteAudioTrackPublication) {}
         override fun onAudioTrackUnpublished(participant: RemoteParticipant, publication: RemoteAudioTrackPublication) {}
         override fun onAudioTrackEnabled(participant: RemoteParticipant, publication: RemoteAudioTrackPublication) {}
@@ -582,7 +586,7 @@ private fun RemoteVideoTrackPublication.toVideoTrack(): VideoTrack {
         name = this.trackName,
         isEnabled = this.isTrackEnabled,
         participantSid = "", // Would need participant reference
-        remoteVideoTrack = this.remoteVideoTrack // <-- add this
+        remoteVideoTrack = if (this.isTrackSubscribed) this.remoteVideoTrack else null
     )
 }
 

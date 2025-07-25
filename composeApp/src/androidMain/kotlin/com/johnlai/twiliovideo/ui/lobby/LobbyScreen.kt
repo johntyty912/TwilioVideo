@@ -25,6 +25,7 @@ fun LobbyScreen(
     val scope = rememberCoroutineScope()
     
     var roomName by remember { mutableStateOf("") }
+    var userIdentity by remember { mutableStateOf("") }
     var connectionStatus by remember { mutableStateOf("Disconnected") }
     var permissionsGranted by remember { mutableStateOf(false) }
     
@@ -101,6 +102,14 @@ fun LobbyScreen(
         )
         
         OutlinedTextField(
+            value = userIdentity,
+            onValueChange = { userIdentity = it },
+            label = { Text("User Identity") },
+            placeholder = { Text("Enter your name or ID") },
+            modifier = Modifier.fillMaxWidth()
+        )
+        
+        OutlinedTextField(
             value = roomName,
             onValueChange = { roomName = it },
             label = { Text("Room Name") },
@@ -116,7 +125,8 @@ fun LobbyScreen(
                         (1..10).map { "abcdefghijklmnopqrstuvwxyz0123456789".random() }
                             .joinToString("")
                     }
-                    videoManager.connect("", finalRoomName)
+                    val finalUserIdentity = userIdentity.ifEmpty { "Anonymous" }
+                    videoManager.connect(finalUserIdentity, finalRoomName)
                 }
             },
             enabled = connectionState is VideoConnectionState.Disconnected && permissionsGranted,

@@ -19,8 +19,10 @@ interface TwilioVideoManager {
      * Connect to a Twilio video room
      * @param userIdentity The user identity to use for the token and room
      * @param roomName The room name to join
+     * @param cameraOn Whether to publish the local video track on join
+     * @param micOn Whether to publish the local audio track on join
      */
-    suspend fun connect(userIdentity: String, roomName: String): VideoResult<VideoRoom>
+    suspend fun connect(userIdentity: String, roomName: String, cameraOn: Boolean, micOn: Boolean): VideoResult<VideoRoom>
     suspend fun disconnect(): VideoResult<Unit>
     
     // Media control

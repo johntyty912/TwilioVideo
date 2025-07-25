@@ -29,6 +29,8 @@ fun LobbyScreen(
     var roomName by remember { mutableStateOf("") }
     var connectionStatus by remember { mutableStateOf("Disconnected") }
     var permissionsGranted by remember { mutableStateOf(false) }
+    var joinWithCameraOn by remember { mutableStateOf(false) }
+    var joinWithMicOn by remember { mutableStateOf(true) }
     
     // Permission launcher
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -118,6 +120,28 @@ fun LobbyScreen(
             modifier = Modifier.fillMaxWidth()
         )
         
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Switch(
+                checked = joinWithCameraOn,
+                onCheckedChange = { joinWithCameraOn = it }
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Join with camera on")
+        }
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Switch(
+                checked = joinWithMicOn,
+                onCheckedChange = { joinWithMicOn = it }
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Join with mic on")
+        }
         Button(
             onClick = {
                 scope.launch {
@@ -127,7 +151,7 @@ fun LobbyScreen(
                             .joinToString("")
                     }
                     val finalUserIdentity = userIdentity.ifEmpty { "Anonymous" }
-                    videoManager.connect(finalUserIdentity, finalRoomName)
+                    videoManager.connect(finalUserIdentity, finalRoomName, joinWithCameraOn, joinWithMicOn)
                 }
             },
             enabled = connectionState is VideoConnectionState.Disconnected && permissionsGranted,

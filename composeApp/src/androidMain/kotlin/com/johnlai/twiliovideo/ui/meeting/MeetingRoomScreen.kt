@@ -27,8 +27,18 @@ fun MeetingRoomScreen(
     val participants by videoManager.participants.collectAsStateWithLifecycle(
         initialValue = emptyList()
     )
-    
-    var isLocalCameraEnabled by remember { mutableStateOf(false) }
+    // Sync camera and mic state with actual local track state
+    val rawLocalVideoTrackFlow = remember {
+        (videoManager as? com.johnlai.twiliovideo.domain.video.TwilioVideoManagerImpl)?.rawLocalVideoTrack
+            ?: kotlinx.coroutines.flow.flowOf(null)
+    }
+    val rawLocalVideoTrack by rawLocalVideoTrackFlow.collectAsStateWithLifecycle(initialValue = null)
+    val isLocalCameraEnabled = rawLocalVideoTrack?.isEnabled == true
+    val isLocalMicEnabledFlow = remember {
+        (videoManager as? com.johnlai.twiliovideo.domain.video.TwilioVideoManagerImpl)?.isLocalMicEnabled
+            ?: kotlinx.coroutines.flow.flowOf(false)
+    }
+    val isLocalMicEnabled by isLocalMicEnabledFlow.collectAsStateWithLifecycle(initialValue = false)
     
     Column(
         modifier = Modifier
@@ -131,9 +141,9 @@ fun MeetingRoomScreen(
                     videoManager.disconnect()
                 }
             },
-            onCameraStateChange = { enabled ->
-                isLocalCameraEnabled = enabled
-            }
+            onCameraStateChange = { /* no-op, state is now synced */ },
+            isMicEnabledInitial = isLocalMicEnabled,
+            isVideoEnabledInitial = isLocalCameraEnabled
         )
     }
 } 

@@ -14,10 +14,12 @@ import com.johnlai.twiliovideo.domain.video.TwilioVideoManager
 fun MeetingControls(
     videoManager: TwilioVideoManager,
     onLeaveRoom: () -> Unit,
-    onCameraStateChange: (Boolean) -> Unit = {} // Add callback for camera state
+    onCameraStateChange: (Boolean) -> Unit = {}, // Add callback for camera state
+    isMicEnabledInitial: Boolean = true,
+    isVideoEnabledInitial: Boolean = false
 ) {
-    var isMicEnabled by remember { mutableStateOf(true) }
-    var isVideoEnabled by remember { mutableStateOf(false) }
+    var isMicEnabled by remember { mutableStateOf(isMicEnabledInitial) }
+    var isVideoEnabled by remember { mutableStateOf(isVideoEnabledInitial) }
     val scope = rememberCoroutineScope()
     
     // Notify parent of camera state changes

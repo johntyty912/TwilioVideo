@@ -55,6 +55,8 @@ actual class TwilioVideoManagerImpl actual constructor() : TwilioVideoManager {
     
     // Expose raw LocalVideoTrack for UI rendering
     val rawLocalVideoTrack: Flow<LocalVideoTrack?> = _localVideoTrack.asStateFlow()
+    // Expose local mic enabled state for UI sync
+    val isLocalMicEnabled: Flow<Boolean> = _localAudioTrack.asStateFlow().map { it?.isEnabled == true }
     
     // Room listener for handling Twilio SDK events
     private val roomListener = object : Room.Listener {
@@ -205,11 +207,11 @@ actual class TwilioVideoManagerImpl actual constructor() : TwilioVideoManager {
         override fun onDataTrackUnpublished(participant: RemoteParticipant, publication: RemoteDataTrackPublication) {}
     }
     
-    override suspend fun connect(userIdentity: String, roomName: String): VideoResult<VideoRoom> {
+    override suspend fun connect(userIdentity: String, roomName: String, cameraOn: Boolean, micOn: Boolean): VideoResult<VideoRoom> {
         return withContext(Dispatchers.IO) {
             try {
                 val appContext = context ?: throw IllegalStateException("Context not provided")
-                Log.d("VideoManager", "Starting connection to room: $roomName as $userIdentity")
+                Log.d("VideoManager", "Starting connection to room: $roomName as $userIdentity (cameraOn=$cameraOn, micOn=$micOn)")
                 // Get token from your API service
                 val tokenResult = tokenService.getToken(
                     userIdentity = userIdentity,
@@ -226,20 +228,34 @@ actual class TwilioVideoManagerImpl actual constructor() : TwilioVideoManager {
                     }
                 }
                 Log.d("VideoManager", "Setting up local media tracks...")
-                // Setup local media tracks
-                setupLocalMediaTracks(appContext)
+                // Only create video track if cameraOn is true
+                if (cameraOn) {
+                    setupLocalVideoTrack(appContext)
+                } else {
+                    _localVideoTrack.value = null
+                }
+                // Only create audio track if micOn is true
+                if (micOn) {
+                    setupLocalAudioTrack(appContext)
+                } else {
+                    _localAudioTrack.value = null
+                }
                 Log.d("VideoManager", "Creating connect options...")
                 // Connect to room
                 val connectOptionsBuilder = ConnectOptions.Builder(token)
                     .roomName(roomName)
                 // Add local tracks if available
-                _localVideoTrack.value?.let { 
-                    Log.d("VideoManager", "Adding local video track")
-                    connectOptionsBuilder.videoTracks(listOf(it))
+                if (cameraOn) {
+                    _localVideoTrack.value?.let { 
+                        Log.d("VideoManager", "Adding local video track")
+                        connectOptionsBuilder.videoTracks(listOf(it))
+                    }
                 }
-                _localAudioTrack.value?.let { 
-                    Log.d("VideoManager", "Adding local audio track")
-                    connectOptionsBuilder.audioTracks(listOf(it))
+                if (micOn) {
+                    _localAudioTrack.value?.let { 
+                        Log.d("VideoManager", "Adding local audio track")
+                        connectOptionsBuilder.audioTracks(listOf(it))
+                    }
                 }
                 val connectOptions = connectOptionsBuilder.build()
                 Log.d("VideoManager", "Setting connection state to Connecting")

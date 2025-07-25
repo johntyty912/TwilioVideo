@@ -15,8 +15,10 @@ import com.johnlai.twiliovideo.ui.meeting.components.TwilioVideoView
 
 @Composable
 fun ParticipantCard(participant: VideoParticipant) {
-    // Try to get the first enabled remote video track
-    val remoteVideoTrack = participant.videoTracks.firstOrNull { it.isEnabled && it.remoteVideoTrack is RemoteVideoTrack }?.remoteVideoTrack as? RemoteVideoTrack
+    // Try to get the first enabled and subscribed remote video track
+    val videoTrack = participant.videoTracks.firstOrNull { it.remoteVideoTrack is RemoteVideoTrack }
+    val remoteVideoTrack = videoTrack?.remoteVideoTrack as? RemoteVideoTrack
+    val isVideoEnabled = videoTrack?.isEnabled == true
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -27,7 +29,7 @@ fun ParticipantCard(participant: VideoParticipant) {
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
-            if (remoteVideoTrack != null) {
+            if (remoteVideoTrack != null && isVideoEnabled) {
                 TwilioVideoView(
                     remoteVideoTrack = remoteVideoTrack,
                     modifier = Modifier.fillMaxSize()
@@ -61,7 +63,7 @@ fun ParticipantCard(participant: VideoParticipant) {
                         maxLines = 1
                     )
                     Text(
-                        text = "Connected",
+                        text = if (isVideoEnabled) "Camera On" else "Camera Off",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.primary
                     )

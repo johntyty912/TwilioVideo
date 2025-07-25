@@ -20,7 +20,8 @@ import com.johnlai.twiliovideo.ui.meeting.components.LocalVideoView
 @Composable
 fun MeetingRoomScreen(
     videoManager: TwilioVideoManager,
-    room: VideoRoom
+    room: VideoRoom,
+    localUserIdentity: String
 ) {
     val scope = rememberCoroutineScope()
     val participants by videoManager.participants.collectAsStateWithLifecycle(
@@ -78,7 +79,7 @@ fun MeetingRoomScreen(
                 LocalVideoView(
                     videoManager = videoManager,
                     isVideoEnabled = isLocalCameraEnabled,
-                    userIdentity = "You"
+                    userIdentity = localUserIdentity
                 )
             }
             

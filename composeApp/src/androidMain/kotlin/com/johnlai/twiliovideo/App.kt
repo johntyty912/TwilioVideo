@@ -27,8 +27,9 @@ fun VideoCallDemo() {
     val connectionState by videoManager.connectionState.collectAsStateWithLifecycle(
         initialValue = VideoConnectionState.Disconnected
     )
+    // Store the user identity entered in the lobby
+    var userIdentity by remember { mutableStateOf("") }
     
-    // Add safe area handling
     Scaffold(
         modifier = Modifier.fillMaxSize()
     ) { paddingValues ->
@@ -38,18 +39,20 @@ fun VideoCallDemo() {
                 .padding(paddingValues)
                 .consumeWindowInsets(paddingValues)
         ) {
-            // Show different screens based on connection state
             when (val state = connectionState) {
                 is VideoConnectionState.Connected -> {
                     MeetingRoomScreen(
                         videoManager = videoManager,
-                        room = state.room
+                        room = state.room,
+                        localUserIdentity = userIdentity
                     )
                 }
                 else -> {
                     LobbyScreen(
                         videoManager = videoManager,
-                        connectionState = connectionState
+                        connectionState = connectionState,
+                        userIdentity = userIdentity,
+                        onUserIdentityChange = { userIdentity = it }
                     )
                 }
             }

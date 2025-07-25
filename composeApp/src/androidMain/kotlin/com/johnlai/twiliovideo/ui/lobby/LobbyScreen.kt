@@ -19,13 +19,14 @@ import com.johnlai.twiliovideo.domain.video.*
 @Composable
 fun LobbyScreen(
     videoManager: TwilioVideoManager,
-    connectionState: VideoConnectionState
+    connectionState: VideoConnectionState,
+    userIdentity: String,
+    onUserIdentityChange: (String) -> Unit
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     
     var roomName by remember { mutableStateOf("") }
-    var userIdentity by remember { mutableStateOf("") }
     var connectionStatus by remember { mutableStateOf("Disconnected") }
     var permissionsGranted by remember { mutableStateOf(false) }
     
@@ -103,7 +104,7 @@ fun LobbyScreen(
         
         OutlinedTextField(
             value = userIdentity,
-            onValueChange = { userIdentity = it },
+            onValueChange = onUserIdentityChange,
             label = { Text("User Identity") },
             placeholder = { Text("Enter your name or ID") },
             modifier = Modifier.fillMaxWidth()

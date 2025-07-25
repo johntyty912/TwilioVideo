@@ -8,6 +8,7 @@ import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.SerialName
 
 /**
  * Token service client for getting Twilio video tokens
@@ -31,7 +32,9 @@ class TokenService(private val tokenUrl: String = VideoConfig.twilioTokenUrl) {
      */
     @Serializable
     data class GetTokenRequest(
+        @SerialName("user_identity")
         val userIdentity: String,
+        @SerialName("room_name")
         val roomName: String
     )
     

@@ -199,19 +199,16 @@ actual class TwilioVideoManagerImpl actual constructor() : TwilioVideoManager {
         override fun onDataTrackUnpublished(participant: RemoteParticipant, publication: RemoteDataTrackPublication) {}
     }
     
-    override suspend fun connect(accessToken: String, roomName: String): VideoResult<VideoRoom> {
+    override suspend fun connect(userIdentity: String, roomName: String): VideoResult<VideoRoom> {
         return withContext(Dispatchers.IO) {
             try {
                 val appContext = context ?: throw IllegalStateException("Context not provided")
-                
-                Log.d("VideoManager", "Starting connection to room: $roomName")
-                
+                Log.d("VideoManager", "Starting connection to room: $roomName as $userIdentity")
                 // Get token from your API service
                 val tokenResult = tokenService.getToken(
-                    userIdentity = VideoConfig.testUserIdentity,
+                    userIdentity = userIdentity,
                     roomName = roomName
                 )
-                
                 val token = when (tokenResult) {
                     is VideoResult.Success -> {
                         Log.d("VideoManager", "Token received successfully")
@@ -222,16 +219,13 @@ actual class TwilioVideoManagerImpl actual constructor() : TwilioVideoManager {
                         return@withContext VideoResult.Error(tokenResult.error)
                     }
                 }
-                
                 Log.d("VideoManager", "Setting up local media tracks...")
                 // Setup local media tracks
                 setupLocalMediaTracks(appContext)
-                
                 Log.d("VideoManager", "Creating connect options...")
                 // Connect to room
                 val connectOptionsBuilder = ConnectOptions.Builder(token)
                     .roomName(roomName)
-                
                 // Add local tracks if available
                 _localVideoTrack.value?.let { 
                     Log.d("VideoManager", "Adding local video track")
@@ -241,17 +235,14 @@ actual class TwilioVideoManagerImpl actual constructor() : TwilioVideoManager {
                     Log.d("VideoManager", "Adding local audio track")
                     connectOptionsBuilder.audioTracks(listOf(it))
                 }
-                
                 val connectOptions = connectOptionsBuilder.build()
                 Log.d("VideoManager", "Setting connection state to Connecting")
                 _connectionState.value = VideoConnectionState.Connecting
                 Log.d("VideoManager", "Calling Video.connect...")
                 val room = Video.connect(appContext, connectOptions, roomListener)
                 _room.value = room
-                
                 Log.d("VideoManager", "Video.connect returned, room state: ${room.state}")
                 VideoResult.Success(room.toVideoRoom())
-                
             } catch (e: Exception) {
                 Log.d("VideoManager", "Connection error: ${e.message}")
                 e.printStackTrace()

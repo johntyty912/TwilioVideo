@@ -15,7 +15,12 @@ interface TwilioVideoManager {
     val networkQuality: Flow<NetworkQuality>
     
     // Room connection management
-    suspend fun connect(accessToken: String, roomName: String): VideoResult<VideoRoom>
+    /**
+     * Connect to a Twilio video room
+     * @param userIdentity The user identity to use for the token and room
+     * @param roomName The room name to join
+     */
+    suspend fun connect(userIdentity: String, roomName: String): VideoResult<VideoRoom>
     suspend fun disconnect(): VideoResult<Unit>
     
     // Media control

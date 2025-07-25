@@ -67,6 +67,8 @@ actual class TwilioVideoManagerImpl actual constructor() : TwilioVideoManager {
             _room.value = room
             Log.d("RoomListener", "RoomListener: _room.value set successfully")
             updateParticipants(room)
+            // Set the participant listener for all existing remote participants
+            room.remoteParticipants.forEach { it.setListener(participantListener) }
         }
         
         override fun onConnectFailure(room: Room, twilioException: TwilioException) {

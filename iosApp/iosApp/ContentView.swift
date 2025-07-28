@@ -1,5 +1,6 @@
 import SwiftUI
 import Shared
+import TwilioVideo
 
 struct ContentView: View {
     @State private var showContent = false

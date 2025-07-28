@@ -21,6 +21,7 @@ val envProps = readEnvFile()
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidLibrary)
+    alias(libs.plugins.kotlinCocoapods)
     kotlin("plugin.serialization") version "2.2.0"
 }
 
@@ -43,6 +44,23 @@ kotlin {
         iosSimulatorArm64
     ).forEach { iosTarget ->
         iosTarget.binaries.framework {
+            baseName = "Shared"
+            isStatic = true
+        }
+    }
+    
+    cocoapods {
+        summary = "Twilio Video KMP Shared Module"
+        homepage = "https://github.com/johnlai/twiliovideo-kmp"
+        version = "1.0"
+        ios.deploymentTarget = "12.2"
+        
+        // Add Twilio Video iOS SDK
+        pod("TwilioVideo") {
+            version = "~> 5.10"
+        }
+        
+        framework {
             baseName = "Shared"
             isStatic = true
         }
@@ -126,7 +144,7 @@ kotlin {
 android {
     namespace = "com.johnlai.twiliovideo.shared"
     compileSdk = 34
-
+    
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17

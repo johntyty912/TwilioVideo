@@ -24,7 +24,7 @@ class TwilioVideoManagerTest {
         assertTrue(result is VideoResult.Success<*> || result is VideoResult.Error<*>)
     }
     
-    @Test 
+    @Test
     fun `should handle connection state changes`() = runTest {
         val manager = TwilioVideoManagerFactory.create()
         val connectionState = manager.connectionState.first()

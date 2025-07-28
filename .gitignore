@@ -17,4 +17,10 @@ captures
 !*.xcworkspace/contents.xcworkspacedata
 **/xcshareddata/WorkspaceSettings.xcsettings
 
-.env.local 
+# Environment and config files
+.env.local
+iosApp/Configuration/Config.local.xcconfig
+
+# CocoaPods
+iosApp/Pods/
+iosApp/Podfile.lock

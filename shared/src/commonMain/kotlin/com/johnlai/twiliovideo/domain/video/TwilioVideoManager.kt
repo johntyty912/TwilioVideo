@@ -57,4 +57,9 @@ data class CameraInfo(
  */
 expect object TwilioVideoManagerFactory {
     fun create(): TwilioVideoManager
-} 
+}
+
+/**
+ * Platform-specific implementation of TwilioVideoManager
+ */
+expect class TwilioVideoManagerImpl() : TwilioVideoManager 

@@ -1,7 +1,14 @@
 TEAM_ID=
 
-PRODUCT_NAME=TwilioVideo
-PRODUCT_BUNDLE_IDENTIFIER=com.johnlai.twiliovideo.TwilioVideo$(TEAM_ID)
+PRODUCT_NAME=iosApp
+PRODUCT_BUNDLE_IDENTIFIER=com.johnlai.twiliovideo.iosapp
 
 CURRENT_PROJECT_VERSION=1
 MARKETING_VERSION=1.0
+
+// Include local configuration if it exists
+#include "Config.local.xcconfig"
+
+// Default values if local config doesn't exist
+TWILIO_TOKEN_URL=your-api-endpoint.com/twilio/video_token
+TEST_USER_IDENTITY=user

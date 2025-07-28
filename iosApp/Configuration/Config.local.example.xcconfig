@@ -1,0 +1,5 @@
+// Copy this file to Config.local.xcconfig and fill in your real values
+// DO NOT commit Config.local.xcconfig to git!
+
+TWILIO_TOKEN_URL=your-api-endpoint.com/twilio/video_token
+TEST_USER_IDENTITY=user 

@@ -555,8 +555,8 @@ actual class TwilioVideoManagerImpl actual constructor() : TwilioVideoManager {
             e.printStackTrace()
             // Clean up on failure
             _cameraCapture.value = null
-            _localVideoTrack.value = null
-        }
+        _localVideoTrack.value = null
+    }
     }
     
     private fun setupLocalAudioTrack(context: Context) {

@@ -1,0 +1,62 @@
+# 🔒 Secure Configuration Setup
+
+This project uses a secure configuration system to keep your real API endpoints private while allowing the code to work out of the box for contributors.
+
+## 📁 Configuration Files
+
+### Public (Committed to Git)
+- `iosApp/Configuration/Config.xcconfig` - Contains placeholder URLs
+- `iosApp/Configuration/Config.local.example.xcconfig` - Template for real config
+- `shared/src/commonMain/kotlin/com/johnlai/twiliovideo/domain/video/VideoConfig.kt` - Default placeholders
+
+### Private (NOT Committed to Git)
+- `.env.local` - Your real API endpoints
+- `iosApp/Configuration/Config.local.xcconfig` - Auto-generated from .env.local
+
+## 🚀 Setup Instructions
+
+### For Contributors (First Time Setup)
+1. Copy the example file:
+   ```bash
+   cp iosApp/Configuration/Config.local.example.xcconfig iosApp/Configuration/Config.local.xcconfig
+   ```
+
+2. Edit `Config.local.xcconfig` with your real API endpoint:
+   ```xcconfig
+   TWILIO_TOKEN_URL=your-real-api.com/twilio/video_token
+   TEST_USER_IDENTITY=user
+   ```
+
+3. **OR** set up `.env.local` in project root:
+   ```env
+   TWILIO_TOKEN_URL=https://your-real-api.com/twilio/video_token
+   TEST_USER_IDENTITY=user
+   ```
+
+### For Development
+- The sync script automatically updates iOS config from `.env.local`
+- Changes to `.env.local` automatically sync to iOS on build
+- ⚠️ Warning messages appear if using placeholder URLs
+
+## 🛡️ Security Features
+
+✅ **Placeholder URLs by default** - Code works out of the box  
+✅ **Private configs ignored by Git** - Real APIs never committed  
+✅ **Automatic warnings** - Alerts when using placeholder URLs  
+✅ **Cross-platform support** - Works on Android and iOS  
+✅ **Auto-sync system** - iOS stays in sync with `.env.local`  
+
+## ⚠️ Important Notes
+
+- **NEVER commit** `.env.local` or `Config.local.xcconfig`
+- **ALWAYS use placeholders** in committed config files
+- **Test with placeholders** before pushing to ensure the app handles missing configs gracefully
+- **Share the example files** with new team members
+
+## 🔧 How It Works
+
+1. **Default State**: App uses `your-api-endpoint.com` placeholders
+2. **Local Development**: Real URLs from `.env.local` or `Config.local.xcconfig`
+3. **Build Time**: iOS sync script copies `.env.local` → `Config.local.xcconfig`
+4. **Runtime**: Warning if placeholder URLs detected
+5. **Git**: Only placeholder configs are committed 

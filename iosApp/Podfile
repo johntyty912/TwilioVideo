@@ -1,0 +1,13 @@
+source 'https://github.com/CocoaPods/Specs.git'
+
+platform :ios, '12.2'
+
+target 'iosApp' do
+  use_frameworks!
+  
+  # Reference our shared module
+  pod 'shared', :path => '../shared'
+  
+  # Twilio Video iOS SDK (also included in shared module)
+  pod 'TwilioVideo', '~> 5.10'
+end 

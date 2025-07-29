@@ -18,6 +18,11 @@ import cocoapods.TwilioVideo.TVIRoom
 import cocoapods.TwilioVideo.TVIRoomDelegateProtocol
 import cocoapods.TwilioVideo.TVILocalAudioTrack
 import cocoapods.TwilioVideo.TVIRemoteParticipant
+import cocoapods.TwilioVideo.TVIRemoteVideoTrack
+import cocoapods.TwilioVideo.TVIRemoteAudioTrack
+import cocoapods.TwilioVideo.TVIRemoteParticipantDelegateProtocol
+import cocoapods.TwilioVideo.TVIRemoteVideoTrackPublication
+import cocoapods.TwilioVideo.TVIRemoteAudioTrackPublication
 import platform.AVFoundation.AVCaptureDevicePositionFront
 import platform.AVFoundation.AVCaptureDevicePositionBack
 import platform.AVFoundation.AVCaptureDevicePositionUnspecified
@@ -63,14 +68,42 @@ actual class TwilioVideoManagerImpl : TwilioVideoManager {
     
     // Expose flows for UI (will be enhanced as we add real SDK integration)
     private val _rawLocalVideoTrack = MutableStateFlow<TVILocalVideoTrack?>(null)
-    val rawLocalVideoTrack: Flow<Any?> = _rawLocalVideoTrack.asStateFlow()
+    val rawLocalVideoTrack: Flow<LocalVideoTrackWrapper?> = _rawLocalVideoTrack.map { track ->
+        track?.let { createLocalVideoTrackWrapper(it as TVILocalVideoTrack) }
+    }
     val isLocalMicEnabled: Flow<Boolean> = _isLocalMicEnabled.asStateFlow()
     
+    // Cached wrapper to avoid recreating it every time
+    private var cachedLocalVideoTrackWrapper: LocalVideoTrackWrapper? = null
+    
     // Method to get the native video track for UI rendering
-    fun getNativeLocalVideoTrack(): TVILocalVideoTrack? = twilioLocalVideoTrack
+    @Throws(IllegalArgumentException::class)
+    fun getNativeLocalVideoTrack(): LocalVideoTrackWrapper? {
+        return twilioLocalVideoTrack?.let { track ->
+            // Return cached wrapper if available and track hasn't changed
+            if (cachedLocalVideoTrackWrapper != null) {
+                return cachedLocalVideoTrackWrapper
+            }
+            
+            // Create new wrapper only if needed
+            try {
+                NSLog("🔍 iOS TwilioVideoManager: Creating wrapper for track type: ${track::class.simpleName}")
+                val wrapper = createLocalVideoTrackWrapper(track as TVILocalVideoTrack)
+                cachedLocalVideoTrackWrapper = wrapper
+                wrapper
+            } catch (e: Exception) {
+                NSLog("❌ iOS TwilioVideoManager: Failed to create wrapper: ${e.message}")
+                null
+            }
+        } ?: run {
+            // Clear cache if no track available
+            cachedLocalVideoTrackWrapper = null
+            null
+        }
+    }
 
     // Room delegate for handling real participant events
-    private val roomDelegate = object : NSObject(), TVIRoomDelegateProtocol {
+    private val roomDelegate = object : NSObject(), TVIRoomDelegateProtocol, TVIRemoteParticipantDelegateProtocol {
         override fun didConnectToRoom(room: TVIRoom) {
             NSLog("🎉 iOS TwilioVideoManager: Room connected successfully - ${room.name}")
             
@@ -113,6 +146,7 @@ actual class TwilioVideoManagerImpl : TwilioVideoManager {
         @ObjCSignatureOverride
         override fun room(room: TVIRoom, participantDidConnect: TVIRemoteParticipant) {
             NSLog("👋 iOS TwilioVideoManager: Participant joined - ${participantDidConnect.identity}")
+            participantDidConnect.delegate = this
             updateParticipants(room)
         }
 
@@ -131,6 +165,55 @@ actual class TwilioVideoManagerImpl : TwilioVideoManager {
         override fun room(room: TVIRoom, participantDidReconnect: TVIRemoteParticipant) {
             NSLog("✅ iOS TwilioVideoManager: Participant reconnected - ${participantDidReconnect.identity}")
             updateParticipants(room)
+        }
+
+        // MARK: - Remote Participant Delegate Methods
+        @ObjCSignatureOverride
+        override fun remoteParticipant(participant: TVIRemoteParticipant, didPublishVideoTrack: TVIRemoteVideoTrackPublication) {
+            NSLog("📹 iOS TwilioVideoManager: Remote video track published - ${participant.identity}")
+            twilioRoom?.let { updateParticipants(it) }
+        }
+
+        @ObjCSignatureOverride
+        override fun remoteParticipant(participant: TVIRemoteParticipant, didUnpublishVideoTrack: TVIRemoteVideoTrackPublication) {
+            NSLog("📹 iOS TwilioVideoManager: Remote video track unpublished - ${participant.identity}")
+            twilioRoom?.let { updateParticipants(it) }
+        }
+
+        @ObjCSignatureOverride
+        override fun remoteParticipant(participant: TVIRemoteParticipant, didPublishAudioTrack: TVIRemoteAudioTrackPublication) {
+            NSLog("🎤 iOS TwilioVideoManager: Remote audio track published - ${participant.identity}")
+            twilioRoom?.let { updateParticipants(it) }
+        }
+
+        @ObjCSignatureOverride
+        override fun remoteParticipant(participant: TVIRemoteParticipant, didUnpublishAudioTrack: TVIRemoteAudioTrackPublication) {
+            NSLog("🎤 iOS TwilioVideoManager: Remote audio track unpublished - ${participant.identity}")
+            twilioRoom?.let { updateParticipants(it) }
+        }
+
+        @ObjCSignatureOverride
+        override fun remoteParticipant(participant: TVIRemoteParticipant, didEnableVideoTrack: TVIRemoteVideoTrackPublication) {
+            NSLog("📹 iOS TwilioVideoManager: Remote video track enabled - ${participant.identity}")
+            twilioRoom?.let { updateParticipants(it) }
+        }
+
+        @ObjCSignatureOverride
+        override fun remoteParticipant(participant: TVIRemoteParticipant, didDisableVideoTrack: TVIRemoteVideoTrackPublication) {
+            NSLog("📹 iOS TwilioVideoManager: Remote video track disabled - ${participant.identity}")
+            twilioRoom?.let { updateParticipants(it) }
+        }
+
+        @ObjCSignatureOverride
+        override fun remoteParticipant(participant: TVIRemoteParticipant, didEnableAudioTrack: TVIRemoteAudioTrackPublication) {
+            NSLog("🎤 iOS TwilioVideoManager: Remote audio track enabled - ${participant.identity}")
+            twilioRoom?.let { updateParticipants(it) }
+        }
+
+        @ObjCSignatureOverride
+        override fun remoteParticipant(participant: TVIRemoteParticipant, didDisableAudioTrack: TVIRemoteAudioTrackPublication) {
+            NSLog("🎤 iOS TwilioVideoManager: Remote audio track disabled - ${participant.identity}")
+            twilioRoom?.let { updateParticipants(it) }
         }
     }
 
@@ -400,6 +483,10 @@ actual class TwilioVideoManagerImpl : TwilioVideoManager {
                     _rawLocalVideoTrack.value = videoTrack
                     updateLocalVideoTrackState()
                     NSLog("✅ iOS TwilioVideoManager: Local video track created using real SDK")
+                    NSLog("📹 iOS TwilioVideoManager: Video track enabled: ${videoTrack.isEnabled()}")
+                    NSLog("📹 iOS TwilioVideoManager: Video track name: ${videoTrack.name}")
+                } else {
+                    NSLog("⚠️ iOS TwilioVideoManager: Video track creation returned null")
                 }
             }
 
@@ -451,12 +538,33 @@ actual class TwilioVideoManagerImpl : TwilioVideoManager {
     }
 
     private fun convertToVideoParticipant(participant: TVIRemoteParticipant): VideoParticipant {
+        // Convert remote video tracks
+        val videoTracks = participant.remoteVideoTracks?.mapIndexed { index, track ->
+            VideoTrack(
+                sid = "video-${participant.sid}-$index",
+                name = "Remote Video $index",
+                isEnabled = true, // Assume enabled for now
+                participantSid = participant.sid ?: "unknown-participant",
+                remoteVideoTrack = track?.let { createVideoTrackWrapper(it) }
+            )
+        } ?: emptyList()
+
+        // Convert remote audio tracks
+        val audioTracks = participant.remoteAudioTracks?.mapIndexed { index, track ->
+            AudioTrack(
+                sid = "audio-${participant.sid}-$index",
+                name = "Remote Audio $index",
+                isEnabled = true, // Assume enabled for now
+                participantSid = participant.sid ?: "unknown-participant"
+            )
+        } ?: emptyList()
+
         return VideoParticipant(
             sid = participant.sid ?: "unknown-sid",
             identity = participant.identity ?: "Unknown",
             isConnected = true,
-            audioTracks = emptyList(), // Will implement track details later
-            videoTracks = emptyList()  // Will implement track details later
+            audioTracks = audioTracks,
+            videoTracks = videoTracks
         )
     }
 
@@ -466,6 +574,7 @@ actual class TwilioVideoManagerImpl : TwilioVideoManager {
 
         twilioLocalVideoTrack = null
         twilioLocalAudioTrack = null
+        cachedLocalVideoTrackWrapper = null // Clear cached wrapper
         twilioCameraSource = null
         twilioRoom = null
         

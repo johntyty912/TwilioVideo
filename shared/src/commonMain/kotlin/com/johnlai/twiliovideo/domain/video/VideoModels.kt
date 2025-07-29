@@ -31,7 +31,7 @@ data class VideoTrack(
     val name: String,
     val isEnabled: Boolean,
     val participantSid: String,
-    val remoteVideoTrack: Any? = null // Will be RemoteVideoTrack on Android
+    val remoteVideoTrack: VideoTrackWrapper? = null // Platform-agnostic video track wrapper
 )
 
 data class AudioTrack(

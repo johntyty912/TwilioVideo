@@ -604,7 +604,7 @@ private fun RemoteVideoTrackPublication.toVideoTrack(): VideoTrack {
         name = this.trackName,
         isEnabled = this.isTrackEnabled,
         participantSid = "", // Would need participant reference
-        remoteVideoTrack = if (this.isTrackSubscribed) this.remoteVideoTrack else null
+                        remoteVideoTrack = if (this.isTrackSubscribed) this.remoteVideoTrack?.let { createVideoTrackWrapper(it) } else null
     )
 }
 

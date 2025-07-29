@@ -1,0 +1,5 @@
+// Include CocoaPods debug configuration first
+#include "Pods/Target Support Files/Pods-iosApp/Pods-iosApp.debug.xcconfig"
+
+// Include our main configuration
+#include "Config.xcconfig" 

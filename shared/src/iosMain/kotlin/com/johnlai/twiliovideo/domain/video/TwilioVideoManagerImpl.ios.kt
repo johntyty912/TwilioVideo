@@ -17,28 +17,29 @@ import cocoapods.TwilioVideo.TVIConnectOptions
 import cocoapods.TwilioVideo.TVIRoom
 import cocoapods.TwilioVideo.TVIRoomDelegateProtocol
 import cocoapods.TwilioVideo.TVILocalAudioTrack
+import cocoapods.TwilioVideo.TVIRemoteParticipant
 import platform.AVFoundation.AVCaptureDevicePositionFront
 import platform.AVFoundation.AVCaptureDevicePositionBack
 import platform.AVFoundation.AVCaptureDevicePositionUnspecified
 import platform.darwin.NSObject
 import platform.Foundation.NSError
+import kotlinx.cinterop.ObjCSignatureOverride
 
 /**
  * iOS implementation of TwilioVideoManager using Twilio Video iOS SDK
  * 
- * This implementation uses real Twilio SDK for camera and room management.
+ * This implementation uses real Twilio SDK integration with progressive feature rollout.
  */
 actual class TwilioVideoManagerImpl : TwilioVideoManager {
     
     private val tokenService = TokenService()
-    
-    // Twilio SDK objects (real types)
-    private var twilioRoom: TVIRoom? = null // ✅ Real type
-    private var twilioLocalVideoTrack: TVILocalVideoTrack? = null // ✅ Real type
-    private var twilioLocalAudioTrack: Any? = null // Will be TVILocalAudioTrack
-    private var twilioCameraSource: TVICameraSource? = null // ✅ Real type
-    private var roomDelegate: RoomDelegate? = null // ✅ Real delegate
-    
+
+    // Twilio SDK objects (renamed to avoid conflicts)
+    private var twilioRoom: TVIRoom? = null
+    private var twilioLocalVideoTrack: TVILocalVideoTrack? = null
+    private var twilioLocalAudioTrack: TVILocalAudioTrack? = null
+    private var twilioCameraSource: TVICameraSource? = null
+
     // State flows
     private val _participants = MutableStateFlow<List<VideoParticipant>>(emptyList())
     private val _connectionState = MutableStateFlow<VideoConnectionState>(VideoConnectionState.Disconnected)
@@ -60,16 +61,85 @@ actual class TwilioVideoManagerImpl : TwilioVideoManager {
     override val localVideoTrack: Flow<VideoTrack?> = _localVideoTrack.asStateFlow()
     override val networkQuality: Flow<NetworkQuality> = _networkQuality.asStateFlow()
     
-    // Expose flows for UI (now with real types)
-    val rawLocalVideoTrack: Flow<TVILocalVideoTrack?> = MutableStateFlow(twilioLocalVideoTrack).asStateFlow()
+    // Expose flows for UI (will be enhanced as we add real SDK integration)
+    val rawLocalVideoTrack: Flow<Any?> = MutableStateFlow(twilioLocalVideoTrack).asStateFlow()
     val isLocalMicEnabled: Flow<Boolean> = _isLocalMicEnabled.asStateFlow()
+    
+    // Method to get the native video track for UI rendering
+    fun getNativeLocalVideoTrack(): TVILocalVideoTrack? = twilioLocalVideoTrack
+
+    // Room delegate for handling real participant events
+    private val roomDelegate = object : NSObject(), TVIRoomDelegateProtocol {
+        override fun didConnectToRoom(room: TVIRoom) {
+            NSLog("🎉 iOS TwilioVideoManager: Room connected successfully - ${room.name}")
+            
+            val videoRoom = VideoRoom(
+                name = room.name ?: "Unknown Room",
+                sid = room.sid ?: "unknown-sid",
+                participants = room.remoteParticipants?.map { participant ->
+                    convertToVideoParticipant(participant as TVIRemoteParticipant)
+                } ?: emptyList()
+            )
+            
+            _connectionState.value = VideoConnectionState.Connected(videoRoom)
+            updateParticipants(room)
+        }
+
+        override fun room(room: TVIRoom, didDisconnectWithError: platform.Foundation.NSError?) {
+            if (didDisconnectWithError != null) {
+                NSLog("❌ iOS TwilioVideoManager: Room disconnected with error - ${didDisconnectWithError.localizedDescription}")
+            } else {
+                NSLog("✅ iOS TwilioVideoManager: Room disconnected successfully")
+            }
+            
+            _connectionState.value = VideoConnectionState.Disconnected
+            _participants.value = emptyList()
+        }
+
+        override fun room(room: TVIRoom, didFailToConnectWithError: platform.Foundation.NSError) {
+            NSLog("💥 iOS TwilioVideoManager: Failed to connect to room - ${didFailToConnectWithError.localizedDescription}")
+            _connectionState.value = VideoConnectionState.Disconnected
+        }
+
+        override fun roomDidStartRecording(room: TVIRoom) {
+            NSLog("🔴 iOS TwilioVideoManager: Room recording started")
+        }
+
+        override fun roomDidStopRecording(room: TVIRoom) {
+            NSLog("⏹️ iOS TwilioVideoManager: Room recording stopped")
+        }
+
+        @ObjCSignatureOverride
+        override fun room(room: TVIRoom, participantDidConnect: TVIRemoteParticipant) {
+            NSLog("👋 iOS TwilioVideoManager: Participant joined - ${participantDidConnect.identity}")
+            updateParticipants(room)
+        }
+
+        @ObjCSignatureOverride
+        override fun room(room: TVIRoom, participantDidDisconnect: TVIRemoteParticipant) {
+            NSLog("👋 iOS TwilioVideoManager: Participant left - ${participantDidDisconnect.identity}")
+            updateParticipants(room)
+        }
+
+        @ObjCSignatureOverride
+        override fun room(room: TVIRoom, participantIsReconnecting: TVIRemoteParticipant) {
+            NSLog("🔄 iOS TwilioVideoManager: Participant reconnecting - ${participantIsReconnecting.identity}")
+        }
+
+        @ObjCSignatureOverride
+        override fun room(room: TVIRoom, participantDidReconnect: TVIRemoteParticipant) {
+            NSLog("✅ iOS TwilioVideoManager: Participant reconnected - ${participantDidReconnect.identity}")
+            updateParticipants(room)
+        }
+    }
 
     override suspend fun connect(userIdentity: String, roomName: String, cameraOn: Boolean, micOn: Boolean): VideoResult<VideoRoom> = withContext(Dispatchers.Main) {
         return@withContext try {
-            NSLog("🚀 iOS TwilioVideoManager: Starting REAL connection - user: $userIdentity, room: $roomName, camera: $cameraOn, mic: $micOn")
+            NSLog("🚀 iOS TwilioVideoManager: Starting connection - user: $userIdentity, room: $roomName, camera: $cameraOn, mic: $micOn")
             _connectionState.value = VideoConnectionState.Connecting
             
             // Get token from our service
+            val tokenService = TokenService()
             val tokenResult = tokenService.getToken(userIdentity = userIdentity, roomName = roomName)
             
             if (tokenResult is VideoResult.Error) {
@@ -80,47 +150,47 @@ actual class TwilioVideoManagerImpl : TwilioVideoManager {
             
             val token = (tokenResult as VideoResult.Success).data
             NSLog("✅ iOS TwilioVideoManager: Token received")
-            
-            // Set up local media with real SDK integration
-            if (cameraOn) {
+
+            // ✅ REAL TWILIO SDK INTEGRATION: Set up local media tracks
+            val videoTracks = if (cameraOn) {
                 setupLocalVideoTrack()
+                listOfNotNull(twilioLocalVideoTrack)
+            } else {
+                emptyList()
             }
-            _isLocalMicEnabled.value = micOn
-            
-            // ✅ REAL TWILIO SDK INTEGRATION: Connect to room using actual API
-            NSLog("🔗 iOS TwilioVideoManager: Connecting to room using REAL Twilio SDK...")
-            
-            // Create room delegate
-            roomDelegate = RoomDelegate(videoManager = this@TwilioVideoManagerImpl)
-            
-            // Create connect options with room name and tracks
+
+            // ✅ REAL AUDIO TRACK INTEGRATION: Create audio track
+            val audioTracks = if (micOn) {
+                setupLocalAudioTrack()
+                listOfNotNull(twilioLocalAudioTrack)
+            } else {
+                emptyList()
+            }
+
+            // ✅ REAL TWILIO SDK INTEGRATION: Connect using actual Twilio SDK
             val connectOptions = TVIConnectOptions.optionsWithToken(token) { builder ->
                 builder?.roomName = roomName
+                builder?.videoTracks = videoTracks
+                builder?.audioTracks = audioTracks
+            }
+
+            connectOptions?.let { options ->
+                NSLog("🔗 iOS TwilioVideoManager: Connecting with ${videoTracks.size} video tracks and ${audioTracks.size} audio tracks")
                 
-                // Add video track if camera is on
-                twilioLocalVideoTrack?.let { videoTrack ->
-                    val videoTracks = listOf(videoTrack)
-                    builder?.videoTracks = videoTracks
-                }
+                val room = TwilioVideoSDK.connectWithOptions(options, delegate = roomDelegate)
+                twilioRoom = room
                 
-                // TODO: Add audio track when implemented
-                builder?.audioTracks = emptyList<TVILocalAudioTrack>()
+                NSLog("✅ iOS TwilioVideoManager: Connection initiated")
+                
+                // Connection success will be handled by roomDidConnect delegate
+                return@withContext VideoResult.Success(VideoRoom(
+                name = roomName,
+                    sid = "connecting...",
+                participants = emptyList()
+                ))
             }
             
-            // Connect to room
-            val room = TwilioVideoSDK.connectWithOptions(connectOptions, delegate = roomDelegate)
-            twilioRoom = room
-            
-            NSLog("✅ iOS TwilioVideoManager: Room connection initiated with real SDK")
-            
-            // Return success - actual connection will be confirmed in delegate
-            val roomModel = VideoRoom(
-                name = roomName,
-                sid = room.sid ?: "connecting",
-                participants = emptyList()
-            )
-            
-            VideoResult.Success(roomModel)
+            VideoResult.Error(VideoError.UnknownError("Failed to create connection options"))
             
         } catch (e: Exception) {
             NSLog("💥 iOS TwilioVideoManager: Connection error: ${e.message}")
@@ -128,15 +198,15 @@ actual class TwilioVideoManagerImpl : TwilioVideoManager {
             VideoResult.Error(VideoError.UnknownError("Failed to connect: ${e.message}"))
         }
     }
-
+    
     override suspend fun disconnect(): VideoResult<Unit> = withContext(Dispatchers.Main) {
         return@withContext try {
-            NSLog("🔌 iOS TwilioVideoManager: Disconnecting from REAL room...")
-            
-            // ✅ REAL TWILIO SDK INTEGRATION: Use actual room disconnect
+            NSLog("🔌 iOS TwilioVideoManager: Disconnecting...")
+
+            // ✅ REAL TWILIO SDK INTEGRATION: Disconnect from room
             twilioRoom?.disconnect()
-            
-            // Cleanup will be handled by delegate callback
+
+            cleanup()
             
             VideoResult.Success(Unit)
         } catch (e: Exception) {
@@ -144,54 +214,58 @@ actual class TwilioVideoManagerImpl : TwilioVideoManager {
             VideoResult.Error(VideoError.UnknownError("Failed to disconnect: ${e.message}"))
         }
     }
-
+    
     override suspend fun enableCamera(enable: Boolean): VideoResult<Unit> = withContext(Dispatchers.Main) {
         return@withContext try {
             NSLog("📹 iOS TwilioVideoManager: Setting camera enabled: $enable")
-            
-            if (enable && twilioLocalVideoTrack == null) {
+
+            if (enable) {
                 setupLocalVideoTrack()
+            } else {
+                _localVideoTrack.value = null
+                twilioLocalVideoTrack = null
             }
-            
+
             // ✅ REAL TWILIO SDK INTEGRATION: Use actual track enable/disable
             twilioLocalVideoTrack?.let { track ->
                 track.setEnabled(enable)
                 updateLocalVideoTrackState()
                 NSLog("✅ iOS TwilioVideoManager: Camera ${if (enable) "enabled" else "disabled"} using real SDK")
             }
-            
-            if (!enable) {
-                _localVideoTrack.value = null
-            }
-            
+
             VideoResult.Success(Unit)
         } catch (e: Exception) {
             NSLog("💥 iOS TwilioVideoManager: Camera enable error: ${e.message}")
             VideoResult.Error(VideoError.UnknownError("Failed to enable camera: ${e.message}"))
         }
     }
-
+    
     override suspend fun enableMicrophone(enable: Boolean): VideoResult<Unit> = withContext(Dispatchers.Main) {
         return@withContext try {
             NSLog("🎤 iOS TwilioVideoManager: Setting microphone enabled: $enable")
-            
-            _isLocalMicEnabled.value = enable
-            
-            // TODO: Replace with real Twilio SDK microphone control
-            // twilioLocalAudioTrack?.isEnabled = enable
-            
+
+            if (enable && twilioLocalAudioTrack == null) {
+                setupLocalAudioTrack()
+            }
+
+            // ✅ REAL AUDIO TRACK INTEGRATION: Use actual audio track enable/disable
+            twilioLocalAudioTrack?.let { track ->
+                track.setEnabled(enable)
+                _isLocalMicEnabled.value = track.isEnabled()
+                NSLog("✅ iOS TwilioVideoManager: Microphone ${if (enable) "enabled" else "disabled"} using real SDK")
+            }
+
             VideoResult.Success(Unit)
         } catch (e: Exception) {
             NSLog("💥 iOS TwilioVideoManager: Microphone enable error: ${e.message}")
             VideoResult.Error(VideoError.UnknownError("Failed to enable microphone: ${e.message}"))
         }
     }
-
+    
     override suspend fun switchCamera(): VideoResult<Unit> = withContext(Dispatchers.Main) {
         return@withContext try {
             NSLog("🔄 iOS TwilioVideoManager: Switching camera...")
-            
-            // ✅ REAL TWILIO SDK INTEGRATION: Use actual camera switching
+
             twilioCameraSource?.let { cameraSource ->
                 val currentDevice = cameraSource.device
                 
@@ -205,87 +279,62 @@ actual class TwilioVideoManagerImpl : TwilioVideoManager {
                         TVICameraSource.captureDeviceForPosition(AVCaptureDevicePositionFront)
                     }
                 } catch (e: Exception) {
-                    NSLog("⚠️ iOS TwilioVideoManager: Error accessing camera position: ${e.message}")
-                    null
+                    NSLog("⚠️ iOS TwilioVideoManager: Camera position detection failed, using front camera")
+                    TVICameraSource.captureDeviceForPosition(AVCaptureDevicePositionFront)
                 }
-                
+
                 newDevice?.let { device ->
                     cameraSource.selectCaptureDevice(device) { captureDevice, format, error ->
                         if (error != null) {
                             NSLog("❌ iOS TwilioVideoManager: Camera switch failed: ${error.localizedDescription}")
                         } else {
-                            NSLog("✅ iOS TwilioVideoManager: Camera switched successfully using real SDK")
+                            NSLog("✅ iOS TwilioVideoManager: Camera switch completed successfully")
                         }
                     }
-                } ?: run {
-                    NSLog("⚠️ iOS TwilioVideoManager: No alternative camera found")
                 }
-            } ?: run {
-                NSLog("⚠️ iOS TwilioVideoManager: No camera source available for switching")
             }
-            
+
             VideoResult.Success(Unit)
         } catch (e: Exception) {
             NSLog("💥 iOS TwilioVideoManager: Camera switch error: ${e.message}")
             VideoResult.Error(VideoError.UnknownError("Failed to switch camera: ${e.message}"))
         }
     }
-
+    
     override suspend fun startScreenShare(): VideoResult<Unit> {
         NSLog("📱 iOS TwilioVideoManager: Screen sharing not implemented yet")
         return VideoResult.Error(VideoError.UnknownError("Screen sharing not implemented on iOS yet"))
     }
-
+    
     override suspend fun stopScreenShare(): VideoResult<Unit> {
         NSLog("📱 iOS TwilioVideoManager: Screen sharing not implemented yet")
         return VideoResult.Error(VideoError.UnknownError("Screen sharing not implemented on iOS yet"))
     }
-
+    
     override suspend fun getAvailableCameras(): List<CameraInfo> {
         return try {
-            NSLog("📱 iOS TwilioVideoManager: Getting available cameras using real Twilio SDK...")
+            // ✅ REAL TWILIO SDK INTEGRATION: Use actual camera enumeration
+            val frontCamera = TVICameraSource.captureDeviceForPosition(AVCaptureDevicePositionFront)
+            val backCamera = TVICameraSource.captureDeviceForPosition(AVCaptureDevicePositionBack)
             
             val cameras = mutableListOf<CameraInfo>()
             
-            // ✅ REAL TWILIO SDK INTEGRATION: Use actual TVICameraSource API
-            
-            // Check for front camera
-            val frontCamera = TVICameraSource.captureDeviceForPosition(AVCaptureDevicePositionFront)
-            if (frontCamera != null) {
-                cameras.add(CameraInfo(
-                    id = "front",
-                    name = "Front Camera",
-                    isFrontFacing = true,
-                    isBackFacing = false
-                ))
-                NSLog("✅ iOS TwilioVideoManager: Found front camera")
+            frontCamera?.let {
+                cameras.add(CameraInfo(id = "front", name = "Front Camera", isFrontFacing = true, isBackFacing = false))
             }
             
-            // Check for back camera  
-            val backCamera = TVICameraSource.captureDeviceForPosition(AVCaptureDevicePositionBack)
-            if (backCamera != null) {
-                cameras.add(CameraInfo(
-                    id = "back", 
-                    name = "Back Camera",
-                    isFrontFacing = false,
-                    isBackFacing = true
-                ))
-                NSLog("✅ iOS TwilioVideoManager: Found back camera")
+            backCamera?.let {
+                cameras.add(CameraInfo(id = "back", name = "Back Camera", isFrontFacing = false, isBackFacing = true))
             }
             
-            NSLog("✅ iOS TwilioVideoManager: Real camera enumeration complete - found ${cameras.size} cameras")
+            NSLog("✅ iOS TwilioVideoManager: Found ${cameras.size} cameras using real SDK")
             cameras
-            
         } catch (e: Exception) {
-            NSLog("💥 iOS TwilioVideoManager: Real camera enumeration failed: ${e.message}")
-            // Fallback to placeholder data
-            listOf(
-                CameraInfo(id = "front", name = "Front Camera", isFrontFacing = true, isBackFacing = false),
-                CameraInfo(id = "back", name = "Back Camera", isFrontFacing = false, isBackFacing = true)
-            )
+            NSLog("💥 iOS TwilioVideoManager: Get cameras error: ${e.message}")
+            emptyList()
         }
     }
-
+    
     override suspend fun getCurrentCameraInfo(): CameraInfo? {
         return try {
             // ✅ REAL TWILIO SDK INTEGRATION: Use actual current camera detection
@@ -303,39 +352,39 @@ actual class TwilioVideoManagerImpl : TwilioVideoManager {
             null
         }
     }
-
+    
     override fun release() {
         try {
             NSLog("🧹 iOS TwilioVideoManager: Releasing resources...")
-            
+
             // ✅ REAL TWILIO SDK INTEGRATION: Proper room disconnect
             twilioRoom?.disconnect()
-            
+
             cleanup()
-            
+
         } catch (e: Exception) {
             NSLog("💥 iOS TwilioVideoManager: Release error: ${e.message}")
         }
     }
-    
+
     // Helper functions
     private fun setupLocalVideoTrack() {
         try {
-            NSLog("📹 iOS TwilioVideoManager: Setting up REAL local video track with Twilio SDK...")
-            
+            NSLog("📹 iOS TwilioVideoManager: Setting up local video track...")
+
             // ✅ REAL TWILIO SDK INTEGRATION: Create actual camera source and video track
-            
-            // Get front camera as default
             val frontCamera = TVICameraSource.captureDeviceForPosition(AVCaptureDevicePositionFront)
-                ?: TVICameraSource.captureDeviceForPosition(AVCaptureDevicePositionBack)
-                ?: TVICameraSource.captureDeviceForPosition(AVCaptureDevicePositionUnspecified)
-            
             frontCamera?.let { camera ->
-                // Create camera source with options
-                val cameraSourceOptions = TVICameraSourceOptions()
-                val cameraSource = TVICameraSource(options = cameraSourceOptions, delegate = null)
+                val options = TVICameraSourceOptions.optionsWithBlock { builder ->
+                    // Configure camera options if needed
+                    // builder?.enableCameraMultitasking = true  // For iOS 16+ if needed
+                }
+                val cameraSource = TVICameraSource(options = options, delegate = null)
                 
-                // Start camera capture
+                // ✅ IMPORTANT: Create video track FIRST before starting capture (SDK requirement)
+                val videoTrack = TVILocalVideoTrack.trackWithSource(cameraSource, true, "camera")
+                
+                // Now start camera capture with device (after video track is created as sink)
                 cameraSource?.startCaptureWithDevice(camera) { captureDevice, format, error ->
                     if (error != null) {
                         NSLog("❌ iOS TwilioVideoManager: Camera capture failed: ${error.localizedDescription}")
@@ -344,28 +393,36 @@ actual class TwilioVideoManagerImpl : TwilioVideoManager {
                     }
                 }
                 
-                // Create local video track with the camera source
-                val localVideoTrack = TVILocalVideoTrack.trackWithSource(cameraSource, enabled = true, name = "camera")
-                
-                if (localVideoTrack != null) {
+                if (videoTrack != null) {
                     twilioCameraSource = cameraSource
-                    twilioLocalVideoTrack = localVideoTrack
+                    twilioLocalVideoTrack = videoTrack
                     updateLocalVideoTrackState()
-                    
-                    NSLog("✅ iOS TwilioVideoManager: REAL local video track created successfully!")
-                } else {
-                    NSLog("❌ iOS TwilioVideoManager: Failed to create local video track")
+                    NSLog("✅ iOS TwilioVideoManager: Local video track created using real SDK")
                 }
-                
-            } ?: run {
-                NSLog("❌ iOS TwilioVideoManager: No camera devices found")
             }
-            
+
         } catch (e: Exception) {
-            NSLog("💥 iOS TwilioVideoManager: Real video track setup error: ${e.message}")
+            NSLog("💥 iOS TwilioVideoManager: Video track setup error: ${e.message}")
         }
     }
-    
+
+    private fun setupLocalAudioTrack() {
+        try {
+            NSLog("🎤 iOS TwilioVideoManager: Setting up local audio track...")
+
+            // ✅ REAL AUDIO TRACK INTEGRATION: Create actual audio track
+            val audioTrack = TVILocalAudioTrack.track()
+            audioTrack?.let { track ->
+                twilioLocalAudioTrack = track
+                _isLocalMicEnabled.value = track.isEnabled()
+                NSLog("✅ iOS TwilioVideoManager: Local audio track created using real SDK")
+            }
+
+        } catch (e: Exception) {
+            NSLog("💥 iOS TwilioVideoManager: Audio track setup error: ${e.message}")
+        }
+    }
+
     private fun updateLocalVideoTrackState() {
         twilioLocalVideoTrack?.let { track ->
             _localVideoTrack.value = VideoTrack(
@@ -377,56 +434,43 @@ actual class TwilioVideoManagerImpl : TwilioVideoManager {
             )
         }
     }
-    
+
+    private fun updateParticipants(room: TVIRoom) {
+        try {
+            val participants = room.remoteParticipants?.map { participant ->
+                convertToVideoParticipant(participant as TVIRemoteParticipant)
+            } ?: emptyList()
+            
+            _participants.value = participants
+            NSLog("👥 iOS TwilioVideoManager: Updated participants list - ${participants.size} participants")
+        } catch (e: Exception) {
+            NSLog("💥 iOS TwilioVideoManager: Error updating participants: ${e.message}")
+        }
+    }
+
+    private fun convertToVideoParticipant(participant: TVIRemoteParticipant): VideoParticipant {
+        return VideoParticipant(
+            sid = participant.sid ?: "unknown-sid",
+            identity = participant.identity ?: "Unknown",
+            isConnected = true,
+            audioTracks = emptyList(), // Will implement track details later
+            videoTracks = emptyList()  // Will implement track details later
+        )
+    }
+
     private fun cleanup() {
-        // ✅ REAL TWILIO SDK INTEGRATION: Proper cleanup of real objects
+        // ✅ REAL TWILIO SDK INTEGRATION: Proper cleanup
         twilioCameraSource?.stopCapture()
-        
+
         twilioLocalVideoTrack = null
         twilioLocalAudioTrack = null
         twilioCameraSource = null
         twilioRoom = null
-        roomDelegate = null
         
         _connectionState.value = VideoConnectionState.Disconnected
         _participants.value = emptyList()
         _localVideoTrack.value = null
         _isLocalMicEnabled.value = false
-    }
-    
-    // ✅ REAL TWILIO SDK INTEGRATION: Room delegate for handling room events
-    private class RoomDelegate(private val videoManager: TwilioVideoManagerImpl) : NSObject(), TVIRoomDelegateProtocol {
-        
-        override fun didConnectToRoom(room: TVIRoom) {
-            NSLog("🎉 iOS TwilioVideoManager: REAL room connection established! Room: ${room.name}")
-            
-            val roomModel = VideoRoom(
-                name = room.name ?: "Connected Room",
-                sid = room.sid ?: "unknown",
-                participants = emptyList() // TODO: Convert room participants
-            )
-            
-            videoManager._connectionState.value = VideoConnectionState.Connected(roomModel)
-        }
-        
-        override fun room(room: TVIRoom, didFailToConnectWithError: NSError) {
-            NSLog("❌ iOS TwilioVideoManager: REAL room connection failed: ${didFailToConnectWithError.localizedDescription}")
-            videoManager._connectionState.value = VideoConnectionState.Disconnected
-        }
-        
-        override fun room(room: TVIRoom, didDisconnectWithError: NSError?) {
-            if (didDisconnectWithError != null) {
-                NSLog("⚠️ iOS TwilioVideoManager: REAL room disconnected with error: ${didDisconnectWithError.localizedDescription}")
-            } else {
-                NSLog("✅ iOS TwilioVideoManager: REAL room disconnected cleanly")
-            }
-            
-            videoManager.cleanup()
-        }
-        
-        // TODO: Add participant event handling
-        // override fun room(room: TVIRoom, participantDidConnect: TVIRemoteParticipant) { ... }
-        // override fun room(room: TVIRoom, participantDidDisconnect: TVIRemoteParticipant) { ... }
     }
 }
 

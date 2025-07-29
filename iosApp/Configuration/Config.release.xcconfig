@@ -1,0 +1,5 @@
+// Include CocoaPods release configuration first
+#include "Pods/Target Support Files/Pods-iosApp/Pods-iosApp.release.xcconfig"
+
+// Include our main configuration
+#include "Config.xcconfig" 

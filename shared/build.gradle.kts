@@ -116,6 +116,10 @@ kotlin {
             dependencies {
                 // iOS-specific coroutines
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+                // iOS-specific HTTP client engine (Darwin implementation for NSURLSession)
+                implementation("io.ktor:ktor-client-darwin:2.3.7")
+                // iOS-specific logging (optional)
+                implementation("io.ktor:ktor-client-logging:2.3.7")
             }
         }
         

@@ -58,6 +58,10 @@
 	</array>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>This app uses the camera to enable video calling features. Camera access is required to participate in video meetings.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>This app uses the microphone to enable audio calling features. Microphone access is required to participate in video meetings.</string>
 	<key>TEST_USER_IDENTITY</key>
 	<string>$(TEST_USER_IDENTITY)</string>
 	<key>TWILIO_TOKEN_URL</key>

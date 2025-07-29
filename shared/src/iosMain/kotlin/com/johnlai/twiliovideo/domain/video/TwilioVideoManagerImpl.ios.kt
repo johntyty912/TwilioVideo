@@ -62,7 +62,8 @@ actual class TwilioVideoManagerImpl : TwilioVideoManager {
     override val networkQuality: Flow<NetworkQuality> = _networkQuality.asStateFlow()
     
     // Expose flows for UI (will be enhanced as we add real SDK integration)
-    val rawLocalVideoTrack: Flow<Any?> = MutableStateFlow(twilioLocalVideoTrack).asStateFlow()
+    private val _rawLocalVideoTrack = MutableStateFlow<TVILocalVideoTrack?>(null)
+    val rawLocalVideoTrack: Flow<Any?> = _rawLocalVideoTrack.asStateFlow()
     val isLocalMicEnabled: Flow<Boolean> = _isLocalMicEnabled.asStateFlow()
     
     // Method to get the native video track for UI rendering
@@ -396,6 +397,7 @@ actual class TwilioVideoManagerImpl : TwilioVideoManager {
                 if (videoTrack != null) {
                     twilioCameraSource = cameraSource
                     twilioLocalVideoTrack = videoTrack
+                    _rawLocalVideoTrack.value = videoTrack
                     updateLocalVideoTrackState()
                     NSLog("✅ iOS TwilioVideoManager: Local video track created using real SDK")
                 }
@@ -470,6 +472,7 @@ actual class TwilioVideoManagerImpl : TwilioVideoManager {
         _connectionState.value = VideoConnectionState.Disconnected
         _participants.value = emptyList()
         _localVideoTrack.value = null
+        _rawLocalVideoTrack.value = null
         _isLocalMicEnabled.value = false
     }
 }
